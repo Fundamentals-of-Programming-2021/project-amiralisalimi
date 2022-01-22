@@ -3,7 +3,10 @@
 
 #include <SDL2/SDL.h>
 
-extern SDL_bool VDO_Init(void);
+extern int VDO_CreateWindow(void);
+extern int VDO_CreateRenderer(void);
+
+extern int VDO_Init(void);
 extern void VDO_Quit(void);
 
 extern SDL_Window * VDO_GetWindow(void);

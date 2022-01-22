@@ -1,10 +1,11 @@
-#include "core/video.h"
+#include "core/game.h"
 
 int main() {
-    SDL_Init(SDL_INIT_VIDEO);
-    VDO_Init();
+    if (GME_Init() != 0) {
+        GME_Quit();
+        return 1;
+    }
+    atexit(GME_Quit);
     SDL_Delay(5000);
-    VDO_Quit();
-    SDL_Quit();
     return 0;
 }
