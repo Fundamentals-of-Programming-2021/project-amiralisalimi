@@ -8,7 +8,6 @@ const int DEFAULT_WINDOW_H = 768;
 const char *g_title = "state.io";
 
 SDL_Window *g_Window = NULL;
-SDL_DisplayMode *g_DisplayMode = NULL;
 
 SDL_bool VDO_Init() {
     Uint32 flags = SDL_WINDOW_SHOWN;
@@ -25,11 +24,11 @@ SDL_bool VDO_Init() {
         LogError("Unable to create window: %s");
         return SDL_FALSE;
     }
-    
-    if (SDL_GetCurrentDisplayMode(0, g_DisplayMode) != 0) {
-        LogError("Unable to get display mode: %s");
-        return SDL_FALSE;
-    }
+
+    int w, h;
+    SDL_GetWindowSize(g_Window, &w, &h);
+    LogInfo("Window %dx%d", w, h);
+
     return SDL_TRUE;
 }
 
@@ -42,14 +41,6 @@ SDL_Window * VDO_GetWindow() {
     return g_Window;
 }
 
-int VDO_GetWidth() {
-    if (!g_DisplayMode)
-        return 0;
-    return g_DisplayMode->w;
-}
-
-int VDO_GetHeight() {
-    if (!g_DisplayMode)
-        return 0;
-    return g_DisplayMode->h;
+void VDO_GetWindowSize(int *w, int *h) {
+    SDL_GetWindowSize(g_Window, w, h);
 }

@@ -1,11 +1,11 @@
 #ifndef _LOG_H
 #define _LOG_H
 
-#define LogInfo(msg) SDL_LogInfo(                     \
-    SDL_LOG_CATEGORY_APPLICATION, msg, SDL_GetError() \
+#define LogInfo(...) SDL_LogInfo(             \
+    SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__ \
 )
-#define LogError(msg) SDL_LogError(                   \
-    SDL_LOG_CATEGORY_APPLICATION, msg, SDL_GetError() \
+#define LogError(...) SDL_LogError(                           \
+    SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__, SDL_GetError() \
 )
 
 #endif /* _LOG_H */
