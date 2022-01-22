@@ -43,9 +43,13 @@ SDL_Window * VDO_GetWindow() {
 }
 
 int VDO_GetWidth() {
+    if (!g_DisplayMode)
+        return 0;
     return g_DisplayMode->w;
 }
 
 int VDO_GetHeight() {
+    if (!g_DisplayMode)
+        return 0;
     return g_DisplayMode->h;
 }
