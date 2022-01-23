@@ -60,6 +60,7 @@ int VDO_Init() {
 void VDO_Quit() {
     SDL_DestroyRenderer(g_Renderer);
     SDL_DestroyWindow(g_Window);
+    g_Renderer = NULL;
     g_Window = NULL;
 }
 
