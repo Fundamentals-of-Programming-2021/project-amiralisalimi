@@ -5,6 +5,8 @@
 #include "area.h"
 
 struct Map {
+    int id;
+
     Player *players;
     int player_cnt;
 
@@ -14,7 +16,7 @@ struct Map {
 typedef struct Map Map;
 
 extern Map* ELE_CreateMap(
-    Player *players, int player_cnt,
+    int id, Player *players, int player_cnt,
     Area *areas, int area_cnt
 );
 extern void ELE_DestroyMap(Map *map);

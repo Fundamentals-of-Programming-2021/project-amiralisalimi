@@ -12,4 +12,6 @@ extern void VDO_Quit(void);
 extern SDL_Window * VDO_GetWindow(void);
 extern void VDO_GetWindowSize(int *w, int *h);
 
+extern SDL_Renderer * VDO_GetRenderer(void);
+
 #endif /* _VIDEO_H */

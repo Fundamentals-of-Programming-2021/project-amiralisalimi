@@ -12,7 +12,7 @@ enum ELE_MapConstants {
 };
 
 Map* ELE_CreateMap(
-    Player *players, int player_cnt,
+    int id, Player *players, int player_cnt,
     Area *areas, int area_cnt
 ) {
     if (player_cnt > MAX_PLAYER_CNT) {
@@ -24,6 +24,7 @@ Map* ELE_CreateMap(
         return NULL;
     }
     Map *new_map = malloc(sizeof(Map));
+    new_map->id = id;
     new_map->players = malloc(sizeof(Player) * player_cnt);
     new_map->player_cnt = player_cnt;
     new_map->areas = malloc(sizeof(Area) * area_cnt);

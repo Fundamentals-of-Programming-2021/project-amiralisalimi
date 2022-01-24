@@ -71,3 +71,7 @@ SDL_Window * VDO_GetWindow() {
 void VDO_GetWindowSize(int *w, int *h) {
     SDL_GetWindowSize(g_Window, w, h);
 }
+
+SDL_Renderer * VDO_GetRenderer() {
+    return g_Renderer;
+}

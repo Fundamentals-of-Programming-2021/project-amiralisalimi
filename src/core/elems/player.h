@@ -13,7 +13,7 @@ struct Player {
 };
 typedef struct Player Player;
 
-extern Player* ELE_CreatePlayer(int id, const char *s);
+extern Player* ELE_CreatePlayer(int id, const char *s, SDL_Color color);
 extern void ELE_DestroyPlayer(Player *player);
 
 #endif /* _PLAYER_H */
