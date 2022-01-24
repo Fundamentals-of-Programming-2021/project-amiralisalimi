@@ -2,14 +2,6 @@
 #include <stdlib.h>
 #include "potion.h"
 
-struct Potion {
-    int id;
-    int type;
-    int seconds;
-
-    SDL_Point center;
-};
-
 Potion* ELE_CreatePotion(
     int id, int type, int seconds,
     SDL_Point center, SDL_Texture *icon

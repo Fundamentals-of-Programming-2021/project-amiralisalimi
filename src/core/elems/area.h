@@ -4,7 +4,17 @@
 #include <SDL2/SDL.h>
 #include "player.h"
 
-struct Area;
+struct Area {
+    int id;
+    Player *conqueror;
+    int capacity;
+    int troop_cnt;
+
+    SDL_Point center;
+    int radius;
+    SDL_Point *vertices;
+    int vertex_cnt;
+};
 typedef struct Area Area;
 
 extern Area* ELE_CreateArea(

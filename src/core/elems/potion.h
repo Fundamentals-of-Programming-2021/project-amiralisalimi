@@ -3,7 +3,13 @@
 
 #include <SDL2/SDL.h>
 
-struct Potion;
+struct Potion {
+    int id;
+    int type;
+    int seconds;
+
+    SDL_Point center;
+};
 typedef struct Potion Potion;
 
 extern Potion* ELE_CreatePotion(

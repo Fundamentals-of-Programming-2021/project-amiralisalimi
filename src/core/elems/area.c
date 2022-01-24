@@ -5,32 +5,13 @@
 #include "../log.h"
 
 enum ELE_AreaConstants {
-    MAX_AREA_CNT = 31,
     MAX_AREA_VERTEX_CNT = 360
 };
-
-struct Area {
-    int id;
-    Player *conqueror;
-    int capacity;
-    int troop_cnt;
-
-    SDL_Point center;
-    int radius;
-    SDL_Point *vertices;
-    int vertex_cnt;
-};
-
-typedef struct Area Area;
 
 Area* ELE_CreateArea(
     int id, Player *conqueror, int capacity, int troop_cnt,
     SDL_Point center, int radius, SDL_Point *vertices, int vertex_cnt
 ) {
-    if (id >= MAX_AREA_CNT) {
-        LogInfo("Areas reached maximum");
-        return NULL;
-    }
     if (vertex_cnt > MAX_AREA_VERTEX_CNT) {
         LogInfo("Area vertex_cnt too much");
         return NULL;
