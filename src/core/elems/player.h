@@ -6,7 +6,7 @@
 struct Player;
 typedef struct Player Player;
 
-extern Player* ELE_CreatePlayer(const char *s);
+extern Player* ELE_CreatePlayer(int id, const char *s);
 extern void ELE_DestroyPlayer(Player *player);
 
 #endif /* _PLAYER_H */
