@@ -11,7 +11,7 @@ enum ELE_AreaConstants {
 };
 
 Area* ELE_CreateArea(
-    int id, Player *conqueror, int capacity, int troop_cnt,
+    int id, Player *conqueror, int capacity, int troop_cnt, int troop_rate,
     SDL_Point center, int radius, SDL_Point *vertices, int vertex_cnt
 ) {
     if (vertex_cnt > MAX_AREA_VERTEX_CNT) {
@@ -91,4 +91,9 @@ void ELE_ColorArea(
 
     free(vertices_x);
     free(vertices_y);
+}
+
+int ELE_GetAreaCapacityByRadius(int radius) {
+    const int NORMAL_RADIUS = 75;
+    return round(2.0 * radius / NORMAL_RADIUS) * 25;
 }

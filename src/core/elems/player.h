@@ -10,6 +10,8 @@ struct Player {
 
     int area_cnt;
     SDL_Color color;
+
+    int troop_rate;
 };
 typedef struct Player Player;
 

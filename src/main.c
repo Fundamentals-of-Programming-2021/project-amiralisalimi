@@ -6,6 +6,7 @@ int main() {
         return 1;
     }
     atexit(GME_Quit);
+    GME_Start();
     SDL_Delay(5000);
     return 0;
 }

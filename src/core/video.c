@@ -75,3 +75,7 @@ void VDO_GetWindowSize(int *w, int *h) {
 SDL_Renderer * VDO_GetRenderer() {
     return g_Renderer;
 }
+
+int VDO_GetFPS() {
+    return 60;
+}

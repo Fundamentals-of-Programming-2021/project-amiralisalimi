@@ -14,4 +14,6 @@ extern void VDO_GetWindowSize(int *w, int *h);
 
 extern SDL_Renderer * VDO_GetRenderer(void);
 
+extern int VDO_GetFPS(void);
+
 #endif /* _VIDEO_H */
