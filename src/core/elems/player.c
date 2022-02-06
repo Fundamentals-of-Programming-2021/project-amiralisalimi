@@ -9,22 +9,37 @@ enum ELE_PlayerConstants {
     DEFAULT_TROOP_RATE = 30 /* Frame */
 };
 
-Player* ELE_CreatePlayer(int id, const char *name, SDL_Color color) {
+Player* ELE_CreatePlayer(
+    int id, const char *name, SDL_Color color, int troop_rate, int score) {
     if (strlen(name) > MAX_NAME_LEN) {
         LogInfo("Player name too long");
         return NULL;
     }
     Player *new_player = malloc(sizeof(Player));
     new_player->id = id;
-    new_player->name = strdup(name);
+    strcpy(new_player->name, name);
     new_player->score = 0;
     new_player->area_cnt = 0;
     new_player->color = color;
-    new_player->troop_rate = DEFAULT_TROOP_RATE;
+    new_player->troop_rate = (troop_rate ? troop_rate : DEFAULT_TROOP_RATE);
+    new_player->score = score;
     return new_player;
 }
 
 void ELE_DestroyPlayer(Player *player) {
     free(player->name);
     free(player);
+}
+
+int ELE_SavePlayers(Player *players, int player_cnt) {
+    const char *players_filename = "bin/data/players.bin";
+    SDL_RWops *players_file = SDL_RWFromFile(players_filename, "w+b");
+    if (players_file != NULL) {
+        SDL_RWwrite(players_file, players, sizeof(Player), player_cnt);
+        SDL_RWclose(players_file);
+    } else {
+        LogError("Unable to r/w players: %s");
+        return -1;
+    }
+    return 0;
 }

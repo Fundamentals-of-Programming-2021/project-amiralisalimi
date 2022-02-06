@@ -7,18 +7,20 @@
 struct Map {
     int id;
 
-    Player *players;
+    Player **players;
     int player_cnt;
 
-    Area *areas;
+    Area **areas;
     int area_cnt;
 };
 typedef struct Map Map;
 
 extern Map* ELE_CreateMap(
-    int id, Player *players, int player_cnt,
-    Area *areas, int area_cnt
+    int id, Player **players, int player_cnt,
+    Area **areas, int area_cnt
 );
 extern void ELE_DestroyMap(Map *map);
+
+extern int ELE_GetMapAreaCntSum(Map *map);
 
 #endif /* _MAP_H */

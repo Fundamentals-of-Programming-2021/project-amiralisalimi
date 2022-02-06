@@ -2,14 +2,25 @@
 #define _GAME_H
 
 #include <SDL2/SDL.h>
+#include "elems/map.h"
 
 extern int GME_Init(void);
 extern void GME_Quit(void);
-extern void GME_Start(void);
+extern int GME_Start(void);
 
-extern void GME_RetrievePlayers(void);
-extern void GME_RetrieveAreas(void);
+extern Player** GME_GetPlayers(void);
+extern int GME_GetPlayerCnt(void);
+
+extern int GME_GetCurPlayer(void);
+
+extern int GME_MapStart(Map *map);
+extern void GME_MapQuit(Map *map);
+
+extern int GME_RetrievePlayers(void);
+extern int GME_RetrieveAreas(int new);
 
 extern void GME_BuildRandMap(void);
+
+extern int GME_RenderGame(void);
 
 #endif /* _GAME_H */

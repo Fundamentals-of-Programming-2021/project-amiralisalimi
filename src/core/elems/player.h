@@ -5,7 +5,7 @@
 
 struct Player {
     int id;
-    char *name;
+    char name[32];
     int score;
 
     int area_cnt;
@@ -15,7 +15,10 @@ struct Player {
 };
 typedef struct Player Player;
 
-extern Player* ELE_CreatePlayer(int id, const char *s, SDL_Color color);
+extern Player* ELE_CreatePlayer(
+    int id, const char *name, SDL_Color color, int troop_rate, int score);
 extern void ELE_DestroyPlayer(Player *player);
+
+extern int ELE_SavePlayers(Player *players, int player_cnt);
 
 #endif /* _PLAYER_H */

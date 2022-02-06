@@ -65,17 +65,18 @@ void ELE_ColorArea(
     for (int i = 0; i < area->vertex_cnt; i++) {
         int dx = area->vertices[i].x - area->center.x;
         int dy = area->vertices[i].y - area->center.y;
-        double tan = 1.0 * dy / dx;
-        double theta = SDL_atan(tan);
+        double theta, PI = acos(-1);
+        if (dx != 0) {
+            theta = SDL_atan(1.0 * dy / dx);
+        } else {
+            theta = (dy > 0 ? PI / 2 : -PI / 2);
+        }
+        if (dx < 0) theta += PI;
         double sin = SDL_sin(theta);
         double cos = SDL_cos(theta);
 
-        vertices_x[i] += (dx > 0 ?
-                        -border_size * cos :
-                        border_size * cos);
-        vertices_y[i] += (dy > 0 ?
-                        -border_size * sin :
-                        border_size * sin);
+        vertices_x[i] -= border_size * cos;
+        vertices_y[i] -= border_size * sin;
     }
     /* Fill color */
     filledPolygonRGBA(
