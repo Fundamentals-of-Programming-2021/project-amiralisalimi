@@ -8,6 +8,7 @@ extern int GME_Init(void);
 extern void GME_Quit(void);
 extern int GME_Start(void);
 
+extern Map* GME_GetCurMap(void);
 extern Player** GME_GetPlayers(void);
 extern int GME_GetPlayerCnt(void);
 

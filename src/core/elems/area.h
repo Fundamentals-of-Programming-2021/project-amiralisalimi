@@ -10,11 +10,15 @@ struct Area {
     int capacity;
     int troop_cnt;
     int troop_rate;
+    int troop_inc_delay;
 
     SDL_Point center;
     int radius;
     SDL_Point *vertices;
     int vertex_cnt;
+
+    struct Area *attack;
+    int attack_delay;
 };
 typedef struct Area Area;
 
@@ -31,5 +35,7 @@ extern void ELE_ColorArea(
 );
 
 extern int ELE_GetAreaCapacityByRadius(int radius);
+
+extern void ELE_AreaConquer(Area *area, Player *player);
 
 #endif /* _AREA_H */

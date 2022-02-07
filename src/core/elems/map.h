@@ -3,6 +3,7 @@
 
 #include "player.h"
 #include "area.h"
+#include "troop.h"
 
 struct Map {
     int id;
@@ -12,6 +13,8 @@ struct Map {
 
     Area **areas;
     int area_cnt;
+
+    Troop *troops_head;
 };
 typedef struct Map Map;
 
@@ -22,5 +25,10 @@ extern Map* ELE_CreateMap(
 extern void ELE_DestroyMap(Map *map);
 
 extern int ELE_GetMapAreaCntSum(Map *map);
+
+extern void ELE_AddTroopToMap(Map *map, Troop *troop);
+extern Troop* ELE_RemoveTroopFromMap(Map *map, Troop *troop);
+
+extern void ELE_HandleCollisions(Map *map);
 
 #endif /* _MAP_H */

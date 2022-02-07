@@ -5,12 +5,11 @@
 #include "../log.h"
 
 enum ELE_PlayerConstants {
-    MAX_NAME_LEN = 31,
-    DEFAULT_TROOP_RATE = 30 /* Frame */
+    MAX_NAME_LEN = 31
 };
 
 Player* ELE_CreatePlayer(
-    int id, const char *name, SDL_Color color, int troop_rate, int score) {
+    int id, const char *name, SDL_Color color, int score) {
     if (strlen(name) > MAX_NAME_LEN) {
         LogInfo("Player name too long");
         return NULL;
@@ -19,10 +18,11 @@ Player* ELE_CreatePlayer(
     new_player->id = id;
     strcpy(new_player->name, name);
     new_player->score = 0;
+    new_player->troop_cnt = 0;
     new_player->area_cnt = 0;
     new_player->color = color;
-    new_player->troop_rate = (troop_rate ? troop_rate : DEFAULT_TROOP_RATE);
     new_player->score = score;
+    new_player->attack_delay = 0;
     return new_player;
 }
 

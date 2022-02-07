@@ -7,7 +7,8 @@
 #include "../log.h"
 
 enum ELE_AreaConstants {
-    MAX_AREA_VERTEX_CNT = 360
+    MAX_AREA_VERTEX_CNT = 360,
+    DEFAULT_TROOP_RATE = 60 /* Frame */
 };
 
 Area* ELE_CreateArea(
@@ -23,9 +24,12 @@ Area* ELE_CreateArea(
     new_area->conqueror = conqueror;
     new_area->capacity = capacity;
     new_area->troop_cnt = troop_cnt;
+    new_area->troop_rate = DEFAULT_TROOP_RATE;
     new_area->center = center;
     new_area->radius = radius;
-
+    new_area->attack = NULL;
+    new_area->attack_delay = 0;
+    new_area->troop_inc_delay = 0;
     new_area->vertices = malloc(sizeof(SDL_Point) * vertex_cnt);
     memcpy(new_area->vertices, vertices, sizeof(SDL_Point) * vertex_cnt);
     new_area->vertex_cnt = vertex_cnt;
@@ -96,5 +100,13 @@ void ELE_ColorArea(
 
 int ELE_GetAreaCapacityByRadius(int radius) {
     const int NORMAL_RADIUS = 75;
-    return round(2.0 * radius / NORMAL_RADIUS) * 25;
+    return round(2.0 * radius / NORMAL_RADIUS) * 50;
+}
+
+void ELE_AreaConquer(Area *area, Player *player) {
+    if (area->conqueror != NULL) {
+        area->conqueror->area_cnt--;
+    }
+    player->area_cnt++;
+    area->conqueror = player;
 }

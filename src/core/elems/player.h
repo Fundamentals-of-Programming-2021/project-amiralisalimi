@@ -9,14 +9,15 @@ struct Player {
     int score;
 
     int area_cnt;
+    int troop_cnt;
     SDL_Color color;
 
-    int troop_rate;
+    int attack_delay;
 };
 typedef struct Player Player;
 
 extern Player* ELE_CreatePlayer(
-    int id, const char *name, SDL_Color color, int troop_rate, int score);
+    int id, const char *name, SDL_Color color, int score);
 extern void ELE_DestroyPlayer(Player *player);
 
 extern int ELE_SavePlayers(Player *players, int player_cnt);
