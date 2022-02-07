@@ -41,6 +41,16 @@ int GME_Init() {
 
 void GME_Quit() {
     LogInfo("Gracefully quitting game");
+    Player **players = GME_GetPlayers();
+    Player player_arr[MAX_PLAYER_CNT] = {0};
+    for (int i = 0; i < MAX_PLAYER_CNT; i++) {
+        if (players[i] != NULL) {
+            player_arr[i] = *players[i];
+        } else {
+            break;
+        }
+    }
+    ELE_SavePlayers(player_arr, GME_GetPlayerCnt());
     VDO_Quit();
     SDL_Quit();
 }
@@ -55,23 +65,11 @@ int GME_Start() {
         case -1:
             return -1;
     }
-    Player **players = GME_GetPlayers();
-    Player player_arr[MAX_PLAYER_CNT] = {0};
-    for (int i = 0; i < MAX_PLAYER_CNT; i++) {
-        if (players[i] != NULL) {
-            player_arr[i] = *players[i];
-        } else {
-            break;
-        }
-    }
-    ELE_SavePlayers(player_arr, GME_GetPlayerCnt());
-    GME_MapStart(0);
-    GME_MapQuit(GME_GetCurMap());
-    return 0;
+    return GME_Menu();
 }
 
 const SDL_Color g_BackgroundColor = (SDL_Color){229, 229, 229, 255};
-const SDL_Color g_NullAreaColor = (SDL_Color){147, 147, 147, 255};
+const SDL_Color g_GreyColor = (SDL_Color){147, 147, 147, 255};
 const SDL_Color g_BlackColor = (SDL_Color){0, 0, 0, 255};
 const SDL_Color g_LightBlackColor = (SDL_Color){50, 50, 50, 255};
 const SDL_Color g_WhiteColor = (SDL_Color){255, 255, 255, 255};
@@ -101,6 +99,140 @@ Player *g_CurPlayer;
 
 Map *g_CurMap;
 int map_cnt = 0;
+
+int GME_Scoreboard() {
+    int quit = 0;
+    int sdl_quit = 0;
+    int w, h;
+    VDO_GetWindowSize(&w, &h);
+    SDL_Event e;
+    SDL_Renderer *renderer = VDO_GetRenderer();
+    TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
+    int table_width = 500, table_height = 600;
+    SDL_Rect table = {w / 2 - table_width / 2, h / 2 - table_height / 2, table_width, table_height};
+    int back_btn_sz = 80;
+    SDL_Rect back_btn = {30, h - 20 - back_btn_sz, back_btn_sz, back_btn_sz};
+    int entry_margin = 15, entry_height = 20, name_width = 350, score_width = 120;
+    int player_cnt = GME_GetPlayerCnt();
+    Player **players = malloc(sizeof(Player*) * player_cnt);
+    memcpy(players, g_Players, sizeof(Player*) * player_cnt);
+    ELE_SortPlayersByScore(players, player_cnt);
+    while (!quit) {
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                quit = 1;
+                sdl_quit = 1;
+            } else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                if (back_btn.x <= x && x <= back_btn.x + back_btn.w &&
+                    back_btn.y <= y && y <= back_btn.y + back_btn.h) {
+                    quit = 1;
+                    break;
+                }
+            }
+        }
+        boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
+        roundedBoxRGBA(renderer, table.x, table.y, table.x + table.w, table.y + table.h, 10,
+            RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "Player", g_WhiteColor, table.x + entry_margin + name_width / 2,
+            table.y + entry_margin + entry_height / 2);
+        GME_WriteTTF(renderer, font, "Score", g_WhiteColor, table.x + table.w - entry_margin - score_width / 2,
+            table.y + entry_margin + entry_height / 2);
+        lineRGBA(renderer, table.x + entry_margin, table.y + 2 * entry_margin + entry_height,
+            table.x + entry_margin + name_width - 4, table.y + 2 * entry_margin + entry_height,
+            RGBAColor(g_WhiteColor));
+        lineRGBA(renderer, table.x + table.w - entry_margin - score_width + 4,
+            table.y + 2 * entry_margin + entry_height,
+            table.x + table.w - entry_margin - 2, table.y + 2 * entry_margin + entry_height,
+            RGBAColor(g_WhiteColor));
+        for (int i = 0; i < player_cnt; i++) {
+            Player *player = players[i];
+            GME_WriteTTF(renderer, font, player->name, g_WhiteColor,
+                table.x + entry_margin + name_width / 2,
+                table.y + (i + 3) * entry_margin + (i + 1) * entry_height + entry_height / 2);
+            char buffer[10];
+            sprintf(buffer, "%d", player->score);
+            GME_WriteTTF(renderer, font, buffer, g_WhiteColor,
+                table.x + table.w - entry_margin - score_width / 2,
+                table.y + (i + 3) * entry_margin + (i + 1) * entry_height + entry_height / 2);
+        }
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w, 
+            back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
+        SDL_RenderPresent(renderer);
+    }
+    free(players);
+    if (sdl_quit) return 1;
+    return 0;
+}
+
+int GME_Menu() {
+    int quit = 0;
+    int w, h;
+    VDO_GetWindowSize(&w, &h);
+    SDL_Event e;
+    SDL_Renderer *renderer = VDO_GetRenderer();
+    TTF_Font *font = TTF_OpenFont("bin/fonts/Aaargh.ttf", 32);
+    int button_width = 400, button_height = 80, button_margin = 40;
+    SDL_Rect new_game_btn = {w / 2 - button_width / 2, h / 2 - 3 * button_height / 2 - button_margin,
+        button_width, button_height};
+    SDL_Rect cont_game_btn = {w / 2 - button_width / 2, h / 2 - button_height / 2,
+        button_width, button_height};
+    SDL_Rect scoreboard_btn = {w / 2 - button_width / 2, h / 2 + button_height / 2 + button_margin,
+        button_width, button_height};
+    while (!quit) {
+        int next = -1;
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                quit = 1;
+            } else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                if (new_game_btn.x <= x && x <= new_game_btn.x + new_game_btn.w &&
+                    new_game_btn.y <= y && y <= new_game_btn.y + new_game_btn.h) {
+                    next = 0;
+                } else if (cont_game_btn.x <= x && x <= cont_game_btn.x + cont_game_btn.w &&
+                    cont_game_btn.y <= y && y <= cont_game_btn.y + cont_game_btn.h) {
+                    next = 1;
+                } else if (scoreboard_btn.x <= x && x <= scoreboard_btn.x + scoreboard_btn.w &&
+                    scoreboard_btn.y <= y && y <= scoreboard_btn.y + scoreboard_btn.h) {
+                    next = 2;
+                }
+            }
+        }
+        if (next == 0) {
+            if (GME_MapStart(0) == 1) {
+                quit = 1;
+            }
+            GME_MapQuit(GME_GetCurMap());
+        } else if (next == 1) {
+
+        } else if (next == 2) {
+            if (GME_Scoreboard() == 1) {
+                quit = 1;
+            }
+        }
+        boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
+        roundedBoxRGBA(renderer, new_game_btn.x, new_game_btn.y,
+            new_game_btn.x + new_game_btn.w, new_game_btn.y + new_game_btn.h,
+            10, RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "New Game", g_WhiteColor, new_game_btn.x + new_game_btn.w / 2,
+            new_game_btn.y + new_game_btn.h / 2);
+        roundedBoxRGBA(renderer, cont_game_btn.x, cont_game_btn.y,
+            cont_game_btn.x + cont_game_btn.w, cont_game_btn.y + cont_game_btn.h,
+            10, RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "Continue Last Game", g_WhiteColor, cont_game_btn.x + cont_game_btn.w / 2,
+            cont_game_btn.y + cont_game_btn.h / 2);
+        roundedBoxRGBA(renderer, scoreboard_btn.x, scoreboard_btn.y,
+            scoreboard_btn.x + scoreboard_btn.w, scoreboard_btn.y + scoreboard_btn.h,
+            10, RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "Scoreboard", g_WhiteColor, scoreboard_btn.x + scoreboard_btn.w / 2,
+            scoreboard_btn.y + scoreboard_btn.h / 2);
+        SDL_RenderPresent(renderer);
+    }
+    TTF_CloseFont(font);
+    return 0;
+}
 
 Map* GME_GetCurMap() {
     return g_CurMap;
@@ -146,7 +278,7 @@ int GME_GetCurPlayer() {
     int name_ptr = 0;
     int quit = 0;
     SDL_Event e;
-    SDL_Color text_color = g_NullAreaColor;
+    SDL_Color text_color = g_GreyColor;
     SDL_StartTextInput();
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     SDL_Surface *icon = IMG_Load("bin/images/icon.png");
@@ -180,7 +312,7 @@ int GME_GetCurPlayer() {
         SDL_RenderCopy(renderer, icon_texture, &icon_src, &icon_box);
         SDL_DestroyTexture(icon_texture);
         roundedBoxRGBA(renderer, w / 2 - 250, h / 2 - 20, w / 2 + 250, h / 2 + 20, 5,
-            RGBAColor(g_NullAreaColor));
+            RGBAColor(g_GreyColor));
         if (GME_WriteTTF(renderer, font, name, g_WhiteColor, w / 2 - 5, h / 2) != 0) {
             return -1;
         }
@@ -312,9 +444,9 @@ void GME_BuildRandMap() {
     int amp = (max_radius - min_radius) / 2;
     int area_cnt = 0;
     double PI = acos(-1);
-    for (int i = 2; i < wsqcnt - 2; i += 3) {
+    for (int i = 2; i < wsqcnt - 4; i += 3) {
         for (int j = 2; j < hsqcnt - 2; j += 3) {
-            if (rand() % 3 == 0) continue;
+            if (rand() % 5 == 0) continue;
             int wst = i * sqsize;
             int hst = j * sqsize;
             SDL_Point center;
@@ -386,6 +518,8 @@ int GME_RenderGame() {
     VDO_GetWindowSize(&w, &h);
     SDL_Renderer *renderer = VDO_GetRenderer();
     SDL_Event e;
+    int back_btn_sz = 80;
+    SDL_Rect back_btn = {30, h - 20 - back_btn_sz, back_btn_sz, back_btn_sz};
     Map *map = g_CurMap;
     Player *player = g_CurPlayer;
     Area **areas = map->areas;
@@ -393,6 +527,7 @@ int GME_RenderGame() {
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 18);
     int troop_cnt = 0;
     int frame = 0;
+    int sdl_quit = 0;
     Player *winner = NULL;
     while (!quit) {
         // Check Win
@@ -413,9 +548,15 @@ int GME_RenderGame() {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
+                sdl_quit = 1;
             } else if (e.type == SDL_MOUSEBUTTONDOWN) {
                 int x, y;
                 SDL_GetMouseState(&x, &y);
+                if (back_btn.x <= x && x <= back_btn.x + back_btn.w &&
+                    back_btn.y <= y && y <= back_btn.y + back_btn.h) {
+                    quit = 1;
+                    break;
+                }
                 for (int i = 0; i < map->area_cnt; i++) {
                     if (abs(x - areas[i]->center.x) + abs(y - areas[i]->center.y) < 25) {
                         if (selected == NULL && areas[i]->conqueror == player) {
@@ -472,7 +613,7 @@ int GME_RenderGame() {
             }
 
             ELE_ColorArea(areas[i], (areas[i] == selected ? g_BlueColor : g_BackgroundColor),
-                (areas[i]->conqueror ? areas[i]->conqueror->color : g_NullAreaColor),
+                (areas[i]->conqueror ? areas[i]->conqueror->color : g_GreyColor),
                 (areas[i] == selected ? 5 : 2));
             filledCircleRGBA(renderer, areas[i]->center.x, areas[i]->center.y, 16,
                 245, 245, 245, 255);
@@ -488,12 +629,12 @@ int GME_RenderGame() {
             int x1 = w - 220, y1 = h - 90 - 80 * i;
             int x2 = w - 20, y2 = h - 20 - 80 * i;
             roundedBoxRGBA(renderer, x1, y1, x2, y2, 10,
-                RGBAColor(GME_ChangeAlpha(g_NullAreaColor, 100)));
+                RGBAColor(GME_ChangeAlpha(g_GreyColor, 100)));
             GME_WriteTTF(renderer, font, map->players[i]->name, g_LightBlackColor,
                 (x1 + x2) / 2, y1 + 20);
             int width = x2 - x1 - 40;
             width = 1.0 * width * map->players[i]->area_cnt / ELE_GetMapAreaCntSum(map);
-            roundedBoxRGBA(renderer, x1 + 20, y2 - 22, x1 + 20 + width, y2 - 20, 2,
+            roundedBoxRGBA(renderer, x1 + 20, y2 - 25, x1 + 20 + width, y2 - 20, 2,
                 RGBAColor(map->players[i]->color));
         }
         // Render Troops
@@ -502,6 +643,8 @@ int GME_RenderGame() {
             filledCircleRGBA(renderer, troop->x, troop->y, 6, RGBAColor(g_BackgroundColor));
             filledCircleRGBA(renderer, troop->x, troop->y, 5, RGBAColor(troop->player->color));
         }
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w, 
+            back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
         ELE_HandleCollisions(map);
         // AI
         for (int i = 0; i < map->player_cnt; i++) {
@@ -525,7 +668,6 @@ int GME_RenderGame() {
                     }
                 }
             }
-            SDL_assert(src != NULL);
             dst = map->areas[to];
             while (dst == src) {
                 to = rand() % map->area_cnt;
@@ -537,13 +679,23 @@ int GME_RenderGame() {
         SDL_RenderPresent(renderer);
     }
     TTF_CloseFont(font);
+    if (sdl_quit) return 1;
     if (winner == NULL) return 0;
+    for (int i = 0; i < map->player_cnt; i++) {
+        if (map->players[i] == winner) {
+            map->players[i]->score += map->player_cnt - 1;
+        } else {
+            map->players[i]->score -= 1;
+        }
+    }
     quit = 0;
+    sdl_quit = 0;
     font = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 28);
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
+                sdl_quit = 1;
             }
         }
         boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
@@ -553,5 +705,6 @@ int GME_RenderGame() {
         SDL_RenderPresent(renderer);
     }
     TTF_CloseFont(font);
+    if (sdl_quit) return 1;
     return 0;
 }

@@ -31,6 +31,18 @@ void ELE_DestroyPlayer(Player *player) {
     free(player);
 }
 
+int ELE_CmpPlayersByScore(const void *first, const void *second) {
+    Player *f = *(Player**)first;
+    Player *s = *(Player**)second;
+    if (f->score < s->score) return 1;
+    if (f->score > s->score) return -1;
+    return 0;
+}
+
+void ELE_SortPlayersByScore(Player **players, int player_cnt) {
+    qsort(players, player_cnt, sizeof(Player*), ELE_CmpPlayersByScore);
+}
+
 int ELE_SavePlayers(Player *players, int player_cnt) {
     const char *players_filename = "bin/data/players.bin";
     SDL_RWops *players_file = SDL_RWFromFile(players_filename, "w+b");

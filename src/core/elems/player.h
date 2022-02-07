@@ -20,6 +20,8 @@ extern Player* ELE_CreatePlayer(
     int id, const char *name, SDL_Color color, int score);
 extern void ELE_DestroyPlayer(Player *player);
 
+extern void ELE_SortPlayersByScore(Player **players, int player_cnt);
+
 extern int ELE_SavePlayers(Player *players, int player_cnt);
 
 #endif /* _PLAYER_H */

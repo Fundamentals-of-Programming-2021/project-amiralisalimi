@@ -5,6 +5,7 @@ notes.txt
 Makefile
 build/
 *.bin
+*.log
 
 # CMake
 CMakeFiles/
