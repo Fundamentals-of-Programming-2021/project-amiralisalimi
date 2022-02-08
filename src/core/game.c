@@ -40,19 +40,23 @@ int GME_Init() {
 }
 
 void GME_Quit() {
-    LogInfo("Gracefully quitting game");
+    LogInfo("Gracefully quitting game...");
     Player **players = GME_GetPlayers();
     Player player_arr[MAX_PLAYER_CNT] = {0};
     for (int i = 0; i < MAX_PLAYER_CNT; i++) {
         if (players[i] != NULL) {
             player_arr[i] = *players[i];
+            ELE_DestroyPlayer(players[i]);
         } else {
             break;
         }
     }
     ELE_SavePlayers(player_arr, GME_GetPlayerCnt());
     VDO_Quit();
+    IMG_Quit();
+    TTF_Quit();
     SDL_Quit();
+    LogInfo("Done.");
 }
 
 int GME_Start() {
@@ -265,6 +269,10 @@ Player** GME_GetPlayers() {
     return g_Players;
 }
 
+Area** GME_GetAreas() {
+    return g_Areas;
+}
+
 int GME_GetPlayerCnt() {
     int player_cnt = MAX_PLAYER_CNT;
     for (int i = 0; i < MAX_PLAYER_CNT; i++) {
@@ -283,6 +291,8 @@ int GME_WriteTTF(SDL_Renderer *renderer, TTF_Font *font, const char *s, SDL_Colo
     SDL_Rect obox = {x - text->w / 2, y - text->h / 2, text->w, text->h};
     SDL_Rect ibox = {0, 0, text->w, text->h};
     if (text == NULL || text_texture == NULL) {
+        SDL_FreeSurface(text);
+        SDL_DestroyTexture(text_texture);
         LogInfo("TTF_Error: %s", TTF_GetError());
         return -1;
     }
@@ -303,13 +313,13 @@ int GME_GetCurPlayer() {
     SDL_Event e;
     SDL_Color text_color = g_GreyColor;
     SDL_StartTextInput();
-    TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     SDL_Surface *icon = IMG_Load("bin/images/icon.png");
     if (icon == NULL) {
-        SDL_FreeSurface(icon);
         LogInfo("IMG_Error: %s", IMG_GetError());
         return -1;
     }
+    TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
+    SDL_Texture *icon_texture = SDL_CreateTextureFromSurface(renderer, icon);
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_KEYDOWN) {
@@ -329,19 +339,16 @@ int GME_GetCurPlayer() {
         boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
         int icon_w = SDL_min(icon->w, 200);
         int icon_h = SDL_min(icon->h, 200);
-        SDL_Texture *icon_texture = SDL_CreateTextureFromSurface(renderer, icon);
         SDL_Rect icon_src = {0, 0, icon->w, icon->h};
         SDL_Rect icon_box = {w / 2 - icon_w / 2, h / 3 - icon_h / 2 - 50, icon_w, icon_h};
         SDL_RenderCopy(renderer, icon_texture, &icon_src, &icon_box);
-        SDL_DestroyTexture(icon_texture);
         roundedBoxRGBA(renderer, w / 2 - 250, h / 2 - 20, w / 2 + 250, h / 2 + 20, 5,
             RGBAColor(g_GreyColor));
-        if (GME_WriteTTF(renderer, font, name, g_WhiteColor, w / 2 - 5, h / 2) != 0) {
-            return -1;
-        }
+        GME_WriteTTF(renderer, font, name, g_WhiteColor, w / 2 - 5, h / 2);
         SDL_RenderPresent(renderer);
     }
     SDL_StopTextInput();
+    SDL_DestroyTexture(icon_texture);
     SDL_FreeSurface(icon);
     TTF_CloseFont(font);
     int player_cnt = MAX_PLAYER_CNT;
@@ -761,7 +768,7 @@ int GME_RenderGame() {
                 areas[i]->center.x, areas[i]->center.y + 25);
         }
         // Render Potion
-        if (rand() % 3000 == 0) {
+        if (rand() % 10 == 0) {
             GME_PutRandomPotion();
         }
         for (int i = 0; i < potion_cnt; i++) {

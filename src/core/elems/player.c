@@ -30,7 +30,6 @@ Player* ELE_CreatePlayer(
 }
 
 void ELE_DestroyPlayer(Player *player) {
-    free(player->name);
     free(player);
 }
 
