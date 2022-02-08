@@ -14,7 +14,7 @@
 #define RGBAColor(color) color.r, color.g, color.b, color.a
 
 enum GME_GameConstants {
-    MAX_PLAYER_CNT = 15,
+    MAX_PLAYER_CNT = 11,
     MAX_AREA_CNT = 31
 };
 
@@ -75,18 +75,14 @@ const SDL_Color g_LightBlackColor = (SDL_Color){50, 50, 50, 255};
 const SDL_Color g_WhiteColor = (SDL_Color){255, 255, 255, 255};
 const SDL_Color g_BlueColor = (SDL_Color){0, 120, 230, 255};
 const SDL_Color g_PlayerColors[MAX_PLAYER_CNT] = {
-    (SDL_Color){.r = 130, .g = 200, .b = 245, .a = 255},
     (SDL_Color){.r =  80, .g = 215, .b = 185, .a = 255},
     (SDL_Color){.r =  75, .g = 115, .b = 215, .a = 255},
     (SDL_Color){.r = 255, .g = 130, .b = 115, .a = 255},
     (SDL_Color){.r = 225, .g = 140, .b = 210, .a = 255},
     (SDL_Color){.r = 245, .g =  65, .b =  40, .a = 255},
     (SDL_Color){.r = 250, .g = 180, .b =  60, .a = 255},
-    (SDL_Color){.r = 240, .g = 165, .b = 220, .a = 255},
-    (SDL_Color){.r = 235, .g = 165, .b = 160, .a = 255},
-    (SDL_Color){.r = 100, .g =  60, .b =  20, .a = 255},
     (SDL_Color){.r = 160, .g = 130, .b =  95, .a = 255},
-    (SDL_Color){.r =   0, .g = 100, .b =  50, .a = 255},
+    (SDL_Color){.r =   0, .g =  80, .b =  50, .a = 255},
     (SDL_Color){.r =  80, .g = 185, .b = 100, .a = 255},
     (SDL_Color){.r = 215, .g = 220, .b =  30, .a = 255},
     (SDL_Color){.r =  75, .g =   0, .b = 206, .a = 255}
@@ -157,8 +153,17 @@ int GME_Scoreboard() {
                 table.x + table.w - entry_margin - score_width / 2,
                 table.y + (i + 3) * entry_margin + (i + 1) * entry_height + entry_height / 2);
         }
-        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w, 
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w,
             back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
+        filledTrigonRGBA(renderer, back_btn.x + 20, back_btn.y + back_btn.h / 2,
+            back_btn.x + back_btn.w - 20, back_btn.y + 15,
+            back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
+            RGBAColor(g_BackgroundColor));
+        char buffer[50];
+        sprintf(buffer, "Player: %s", g_CurPlayer->name);
+        roundedRectangleRGBA(renderer, w - 370, h - 75, w - 20, h - 25, 10, RGBAColor(g_BlackColor));
+        GME_WriteTTF(renderer, font, buffer, g_BlackColor,
+            w - 200, h - 50);
         SDL_RenderPresent(renderer);
     }
     free(players);
@@ -173,7 +178,8 @@ int GME_Menu() {
     SDL_Event e;
     SDL_Renderer *renderer = VDO_GetRenderer();
     TTF_Font *font = TTF_OpenFont("bin/fonts/Aaargh.ttf", 32);
-    int button_width = 400, button_height = 80, button_margin = 40;
+    TTF_Font *font_small = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
+    int button_width = 400, button_height = 80, button_margin = 30;
     SDL_Rect new_game_btn = {w / 2 - button_width / 2, h / 2 - 3 * button_height / 2 - button_margin,
         button_width, button_height};
     SDL_Rect cont_game_btn = {w / 2 - button_width / 2, h / 2 - button_height / 2,
@@ -228,6 +234,11 @@ int GME_Menu() {
             10, RGBAColor(g_GreyColor));
         GME_WriteTTF(renderer, font, "Scoreboard", g_WhiteColor, scoreboard_btn.x + scoreboard_btn.w / 2,
             scoreboard_btn.y + scoreboard_btn.h / 2);
+        char buffer[50];
+        sprintf(buffer, "Player: %s", g_CurPlayer->name);
+        roundedRectangleRGBA(renderer, w - 370, h - 75, w - 20, h - 25, 10, RGBAColor(g_BlackColor));
+        GME_WriteTTF(renderer, font_small, buffer, g_BlackColor,
+            w - 200, h - 50);
         SDL_RenderPresent(renderer);
     }
     TTF_CloseFont(font);
@@ -296,7 +307,7 @@ int GME_GetCurPlayer() {
                     quit = 1;
                 }
             } else if (e.type == SDL_TEXTINPUT) {
-                if (name_ptr < 31)
+                if (name_ptr < 15)
                     strcat(name, e.text.text);
                 name_ptr = strlen(name);
             } else if (e.type == SDL_QUIT) {
@@ -393,7 +404,6 @@ int GME_RetrievePlayers() {
         g_Players[1] = ELE_CreatePlayer(1, "AArshiAA", g_PlayerColors[1], 0);
         g_Players[2] = ELE_CreatePlayer(2, "AAArshiAAA", g_PlayerColors[2], 0);
         g_Players[3] = ELE_CreatePlayer(3, "IArshiAI", g_PlayerColors[3], 0);
-        g_Players[4] = ELE_CreatePlayer(4, "IIArshiAII", g_PlayerColors[4], 0);
     } else {
         SDL_RWread(players_file, players, sizeof(Player), MAX_PLAYER_CNT);
         SDL_RWclose(players_file);
@@ -564,7 +574,7 @@ int GME_RenderGame() {
                         } else if (selected == areas[i]) {
                             selected = NULL;
                         } else if (selected != NULL) {
-                            selected->attack = areas[i];
+                            ELE_AreaAttack(selected, areas[i]);
                             selected = NULL;
                         }
                         break;
@@ -580,16 +590,21 @@ int GME_RenderGame() {
                 && areas[i]->attack == NULL && areas[i]->conqueror != NULL && areas[i]->troop_inc_delay == 0) {
                 ++areas[i]->troop_cnt;
             }
-            if (areas[i]->troop_cnt == 0) areas[i]->attack = NULL;
+            if (areas[i]->troop_cnt <= 0) {
+                areas[i]->troop_cnt = 0;
+                areas[i]->attack_cnt = 0;
+            }
+            if (areas[i]->attack_cnt == 0) ELE_AreaUnAttack(areas[i]);
             if (areas[i]->attack != NULL) {
                 if (areas[i]->attack_delay) --areas[i]->attack_delay;
-                else {
+                else if (areas[i]->attack_cnt > 0) {
                     for (int it = 0; it < 5; it++) {
-                        if (areas[i]->troop_cnt == 0) {
-                            areas[i]->attack = NULL;
+                        if (areas[i]->attack_cnt == 0) {
+                            ELE_AreaUnAttack(areas[i]);
                             break;
                         }
                         areas[i]->troop_cnt--;
+                        areas[i]->attack_cnt--;
                         int sx = areas[i]->center.x, sy = areas[i]->center.y;
                         int dx = areas[i]->attack->center.x, dy = areas[i]->attack->center.y;
                         double x, y;
@@ -611,7 +626,6 @@ int GME_RenderGame() {
                     areas[i]->attack_delay = 25;
                 }
             }
-
             ELE_ColorArea(areas[i], (areas[i] == selected ? g_BlueColor : g_BackgroundColor),
                 (areas[i]->conqueror ? areas[i]->conqueror->color : g_GreyColor),
                 (areas[i] == selected ? 5 : 2));
@@ -643,8 +657,12 @@ int GME_RenderGame() {
             filledCircleRGBA(renderer, troop->x, troop->y, 6, RGBAColor(g_BackgroundColor));
             filledCircleRGBA(renderer, troop->x, troop->y, 5, RGBAColor(troop->player->color));
         }
-        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w, 
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w,
             back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
+        filledTrigonRGBA(renderer, back_btn.x + 20, back_btn.y + back_btn.h / 2,
+            back_btn.x + back_btn.w - 20, back_btn.y + 15,
+            back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
+            RGBAColor(g_BackgroundColor));
         ELE_HandleCollisions(map);
         // AI
         for (int i = 0; i < map->player_cnt; i++) {
@@ -673,7 +691,7 @@ int GME_RenderGame() {
                 to = rand() % map->area_cnt;
                 dst = map->areas[to];
             }
-            src->attack = dst;
+            ELE_AreaAttack(src, dst);
             player->attack_delay = 60;
         }
         SDL_RenderPresent(renderer);
@@ -696,12 +714,26 @@ int GME_RenderGame() {
             if (e.type == SDL_QUIT) {
                 quit = 1;
                 sdl_quit = 1;
+            } else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                if (back_btn.x <= x && x <= back_btn.x + back_btn.w &&
+                    back_btn.y <= y && y <= back_btn.y + back_btn.h) {
+                    quit = 1;
+                    break;
+                }
             }
         }
         boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
         char buffer[50];
         sprintf(buffer, "%s won the game", winner->name);
         GME_WriteTTF(renderer, font, buffer, g_BlackColor, w / 2, h / 2);
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w,
+            back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
+        filledTrigonRGBA(renderer, back_btn.x + 20, back_btn.y + back_btn.h / 2,
+            back_btn.x + back_btn.w - 20, back_btn.y + 15,
+            back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
+            RGBAColor(g_BackgroundColor));
         SDL_RenderPresent(renderer);
     }
     TTF_CloseFont(font);

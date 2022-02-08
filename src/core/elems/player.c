@@ -5,7 +5,8 @@
 #include "../log.h"
 
 enum ELE_PlayerConstants {
-    MAX_NAME_LEN = 31
+    MAX_NAME_LEN = 15,
+    DEFAULT_TROOP_RATE = 60 /* Frame */
 };
 
 Player* ELE_CreatePlayer(
@@ -19,6 +20,7 @@ Player* ELE_CreatePlayer(
     strcpy(new_player->name, name);
     new_player->score = 0;
     new_player->troop_cnt = 0;
+    new_player->troop_rate = DEFAULT_TROOP_RATE;
     new_player->area_cnt = 0;
     new_player->color = color;
     new_player->score = score;

@@ -19,6 +19,7 @@ struct Area {
 
     struct Area *attack;
     int attack_delay;
+    int attack_cnt;
 };
 typedef struct Area Area;
 
@@ -35,6 +36,9 @@ extern void ELE_ColorArea(
 );
 
 extern int ELE_GetAreaCapacityByRadius(int radius);
+
+extern void ELE_AreaAttack(Area *first, Area *second);
+extern void ELE_AreaUnAttack(Area *first);
 
 extern void ELE_AreaConquer(Area *area, Player *player);
 

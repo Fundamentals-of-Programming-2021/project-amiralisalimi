@@ -10,6 +10,7 @@ struct Player {
 
     int area_cnt;
     int troop_cnt;
+    int troop_rate;
     SDL_Color color;
 
     int attack_delay;

@@ -39,11 +39,6 @@ Map* ELE_CreateMap(
 
 void ELE_DestroyMap(Map *map) {
     for (int i = 0; i < map->area_cnt; i++) ELE_DestroyArea(map->areas[i]);
-    for (int i = 0; i < map->player_cnt; i++) {
-        map->players[i]->area_cnt = 0;
-        map->players[i]->troop_cnt = 0;
-        map->players[i]->attack_delay = 0;
-    }
     Troop *head;
     for (head = map->troops_head; head != NULL; head = head->next) {
         if (head->prev != NULL) {
@@ -51,6 +46,11 @@ void ELE_DestroyMap(Map *map) {
         }
     }
     if (head != NULL) ELE_DestroyTroop(head);
+    for (int i = 0; i < map->player_cnt; i++) {
+        map->players[i]->area_cnt = 0;
+        map->players[i]->troop_cnt = 0;
+        map->players[i]->attack_delay = 0;
+    }
     free(map->areas);
     free(map->players);
     free(map);

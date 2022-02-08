@@ -29,6 +29,7 @@ Area* ELE_CreateArea(
     new_area->radius = radius;
     new_area->attack = NULL;
     new_area->attack_delay = 0;
+    new_area->attack_cnt = 0;
     new_area->troop_inc_delay = 0;
     new_area->vertices = malloc(sizeof(SDL_Point) * vertex_cnt);
     memcpy(new_area->vertices, vertices, sizeof(SDL_Point) * vertex_cnt);
@@ -101,6 +102,16 @@ void ELE_ColorArea(
 int ELE_GetAreaCapacityByRadius(int radius) {
     const int NORMAL_RADIUS = 75;
     return round(2.0 * radius / NORMAL_RADIUS) * 50;
+}
+
+void ELE_AreaAttack(Area *first, Area *second) {
+    first->attack = second;
+    first->attack_cnt = first->troop_cnt;
+}
+
+void ELE_AreaUnAttack(Area *first) {
+    first->attack = NULL;
+    first->attack_cnt = 0;
 }
 
 void ELE_AreaConquer(Area *area, Player *player) {
