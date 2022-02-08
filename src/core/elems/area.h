@@ -42,4 +42,6 @@ extern void ELE_AreaUnAttack(Area *first);
 
 extern void ELE_AreaConquer(Area *area, Player *player);
 
+extern int ELE_GetAreaAppliedPotionType(Area *area);
+
 #endif /* _AREA_H */

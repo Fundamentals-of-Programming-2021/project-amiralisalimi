@@ -87,6 +87,12 @@ const SDL_Color g_PlayerColors[MAX_PLAYER_CNT] = {
     (SDL_Color){.r = 215, .g = 220, .b =  30, .a = 255},
     (SDL_Color){.r =  75, .g =   0, .b = 206, .a = 255}
 };
+const SDL_Color g_PotionColors[4] = {
+    (SDL_Color){0, 216, 64, 255},
+    (SDL_Color){241, 214, 0, 255},
+    (SDL_Color){174, 0, 128, 255},
+    (SDL_Color){165, 0, 0, 255}
+};
 
 Player *g_Players[MAX_PLAYER_CNT];
 Area *g_Areas[MAX_AREA_CNT];
@@ -95,6 +101,12 @@ Player *g_CurPlayer;
 
 Map *g_CurMap;
 int map_cnt = 0;
+
+Potion **g_Potions;
+int potion_cnt;
+int potion_size;
+
+SDL_Texture *g_PotionTextures[4];
 
 int GME_Scoreboard() {
     int quit = 0;
@@ -384,11 +396,49 @@ int GME_MapStart(Map *map) {
         if (g_CurMap->areas[start_area]->conqueror != NULL) return -1;
         ELE_AreaConquer(g_CurMap->areas[start_area], g_CurMap->players[i]);
     }
+    g_Potions = malloc(sizeof(Potion*));
+    potion_cnt = 0;
+    potion_size = 1;
+    SDL_Surface *surf;
+    SDL_Renderer *renderer = VDO_GetRenderer();
+    surf = IMG_Load("bin/images/TroopSpeedX2.png");
+    g_PotionTextures[0] = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    surf = IMG_Load("bin/images/TroopFreezeOthers.png");
+    g_PotionTextures[1] = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    surf = IMG_Load("bin/images/AreaBeyondCapacity.png");
+    g_PotionTextures[2] = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    surf = IMG_Load("bin/images/AreaShield.png");
+    g_PotionTextures[3] = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
     LogInfo("Map id %d", g_CurMap->id);
     return GME_RenderGame();
 }
 
 void GME_MapQuit(Map *map) {
+    if (g_Potions != NULL) {
+        for (int i = 0; i < potion_cnt; i++) {
+            if (g_Potions[i] != NULL) {
+                ELE_DestroyPotion(g_Potions[i]);
+            }
+        }
+    }
+    free(g_Potions);
+    g_Potions = NULL;
+    for (int i = 0; i < map->player_cnt; i++) {
+        if (map->players[i]->applied_potion != NULL) {
+            ELE_DestroyPotion(map->players[i]->applied_potion);
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        if (g_PotionTextures[i] == NULL) continue;
+        SDL_DestroyTexture(g_PotionTextures[i]);
+        g_PotionTextures[i] = NULL;
+    }
+    potion_cnt = 0;
+    potion_size = 0;
     ELE_DestroyMap(map);
 }
 
@@ -521,6 +571,35 @@ void GME_Move2(double x, double y, double size, double theta, double *nx, double
     *nx = x + size * cosinus, *ny = y + size * sinus;
 }
 
+int GME_PutRandomPotion() {
+    int type = rand() % 4;
+    SDL_Point center;
+    int area_cnt = g_CurMap->area_cnt;
+    int from = rand() % area_cnt;
+    int to = rand() % area_cnt;
+    for (int i = 0; i < 10; i++) {
+        Area *first = g_Areas[from], *second = g_Areas[to];
+        if (abs(first->center.x - second->center.x) +
+            abs(first->center.y - second->center.y) > 400) break;
+        to = rand() % area_cnt;
+    }
+    Area *src = g_Areas[from], *dst = g_Areas[to];
+    if (abs(src->center.x - dst->center.x) +
+        abs(src->center.y - dst->center.y) <= 400) return -1;
+    center.x = src->center.x; center.y = src->center.y;
+    int size = rand() % 240 + 80;
+    double X, Y;
+    GME_Move(center.x, center.y, size, src->center.x, src->center.y,
+        dst->center.x, dst->center.y, &X, &Y);
+    center.x = X; center.y = Y;
+    g_Potions[potion_cnt] = ELE_CreatePotion(potion_cnt, type, 1500, 1500, center);
+    ++potion_cnt;
+    if (potion_cnt == potion_size) {
+        potion_size *= 2;
+        g_Potions = realloc(g_Potions, sizeof(Potion*) * potion_size);
+    }
+}
+
 int GME_RenderGame() {
     LogInfo("Start Render Game");
     int quit = 0;
@@ -574,6 +653,9 @@ int GME_RenderGame() {
                         } else if (selected == areas[i]) {
                             selected = NULL;
                         } else if (selected != NULL) {
+                            if (ELE_GetAreaAppliedPotionType(areas[i]) == AREA_SHIELD &&
+                                areas[i]->conqueror != selected->conqueror)
+                                break;
                             ELE_AreaAttack(selected, areas[i]);
                             selected = NULL;
                         }
@@ -582,12 +664,47 @@ int GME_RenderGame() {
                 }
             }
         }
-        // Render Areas
         boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
+        // Render Player names
+        int freeze_is_applied = 0;
+        for (int i = 0; i < map->player_cnt; i++) {
+            Player *player = map->players[i];
+            int x1 = w - 220, y1 = h - 90 - 80 * i;
+            int x2 = w - 20, y2 = h - 20 - 80 * i;
+            int in_game = (player->troop_cnt + player->area_cnt > 0);
+            if (in_game && player->applied_potion != NULL) {
+                roundedBoxRGBA(renderer, x1 - 5, y1 - 5, x2 + 5, y2 + 5, 10,
+                    RGBAColor(g_PotionColors[player->applied_potion->type]));
+                roundedBoxRGBA(renderer, x1, y1, x2, y2, 10, RGBAColor(g_BackgroundColor));
+            }
+            roundedBoxRGBA(renderer, x1, y1, x2, y2, 10,
+                RGBAColor(GME_ChangeAlpha(g_GreyColor, (in_game ? 100 : 20))));
+            GME_WriteTTF(renderer, font, player->name, GME_ChangeAlpha(g_LightBlackColor, (in_game ? 255 : 155)),
+                (x1 + x2) / 2, y1 + 20);
+            int width = x2 - x1 - 40;
+            width = 1.0 * width * player->area_cnt / ELE_GetMapAreaCntSum(map);
+            roundedBoxRGBA(renderer, x1 + 20, y2 - 25, x1 + 20 + width, y2 - 20, 2,
+                RGBAColor(player->color));
+            // Player applied potion
+            if (player->applied_potion != NULL) {
+                if (player->applied_potion->frames_applied <= 0) {
+                    ELE_DestroyPotion(player->applied_potion);
+                    player->applied_potion = NULL;
+                } else {
+                    --player->applied_potion->frames_applied;
+                }
+            }
+            if (player->applied_potion != NULL) {
+                freeze_is_applied |= (player->applied_potion->type == TROOP_FREEZE_OTHERS);
+            }
+        }
+        // Render Areas
         for (int i = 0; i < map->area_cnt; i++) {
             if (areas[i]->troop_inc_delay > 0) --areas[i]->troop_inc_delay;
-            if (frame % areas[i]->troop_rate == 0 && areas[i]->troop_cnt < areas[i]->capacity
-                && areas[i]->attack == NULL && areas[i]->conqueror != NULL && areas[i]->troop_inc_delay == 0) {
+            if (frame % areas[i]->troop_rate == 0 /* && areas[i]->attack == NULL  */&&
+                areas[i]->conqueror != NULL && areas[i]->troop_inc_delay == 0 &&
+                (areas[i]->troop_cnt < areas[i]->capacity ||
+                    (ELE_GetAreaAppliedPotionType(areas[i]) == AREA_BEYOND_CAPACITY))) {
                 ++areas[i]->troop_cnt;
             }
             if (areas[i]->troop_cnt <= 0) {
@@ -596,7 +713,11 @@ int GME_RenderGame() {
             }
             if (areas[i]->attack_cnt == 0) ELE_AreaUnAttack(areas[i]);
             if (areas[i]->attack != NULL) {
-                if (areas[i]->attack_delay) --areas[i]->attack_delay;
+                if (freeze_is_applied && ELE_GetAreaAppliedPotionType(areas[i]) != TROOP_FREEZE_OTHERS)
+                    ;
+                else if (areas[i]->attack_delay > 0) {
+                    areas[i]->attack_delay -= (ELE_GetAreaAppliedPotionType(areas[i]) == TROOP_SPEED_X2 ? 2 : 1);
+                }
                 else if (areas[i]->attack_cnt > 0) {
                     for (int it = 0; it < 5; it++) {
                         if (areas[i]->attack_cnt == 0) {
@@ -626,7 +747,8 @@ int GME_RenderGame() {
                     areas[i]->attack_delay = 25;
                 }
             }
-            ELE_ColorArea(areas[i], (areas[i] == selected ? g_BlueColor : g_BackgroundColor),
+            ELE_ColorArea(areas[i], (areas[i] == selected ? g_BlueColor :
+                (ELE_GetAreaAppliedPotionType(areas[i]) == AREA_SHIELD ? g_BlackColor : g_BackgroundColor)),
                 (areas[i]->conqueror ? areas[i]->conqueror->color : g_GreyColor),
                 (areas[i] == selected ? 5 : 2));
             filledCircleRGBA(renderer, areas[i]->center.x, areas[i]->center.y, 16,
@@ -638,22 +760,37 @@ int GME_RenderGame() {
             GME_WriteTTF(renderer, font, buffer, g_BlackColor,
                 areas[i]->center.x, areas[i]->center.y + 25);
         }
-        // Render Player names
-        for (int i = 0; i < map->player_cnt; i++) {
-            int x1 = w - 220, y1 = h - 90 - 80 * i;
-            int x2 = w - 20, y2 = h - 20 - 80 * i;
-            roundedBoxRGBA(renderer, x1, y1, x2, y2, 10,
-                RGBAColor(GME_ChangeAlpha(g_GreyColor, 100)));
-            GME_WriteTTF(renderer, font, map->players[i]->name, g_LightBlackColor,
-                (x1 + x2) / 2, y1 + 20);
-            int width = x2 - x1 - 40;
-            width = 1.0 * width * map->players[i]->area_cnt / ELE_GetMapAreaCntSum(map);
-            roundedBoxRGBA(renderer, x1 + 20, y2 - 25, x1 + 20 + width, y2 - 20, 2,
-                RGBAColor(map->players[i]->color));
+        // Render Potion
+        if (rand() % 3000 == 0) {
+            GME_PutRandomPotion();
+        }
+        for (int i = 0; i < potion_cnt; i++) {
+            if (g_Potions[i] != NULL) {
+                if (g_Potions[i]->frames_onmap == 0) {
+                    ELE_DestroyPotion(g_Potions[i]);
+                    g_Potions[i] = NULL;
+                    continue;
+                }
+                --g_Potions[i]->frames_onmap;
+                SDL_Texture *potion_texture = g_PotionTextures[g_Potions[i]->type];
+                SDL_Point center = g_Potions[i]->center;
+                int w, h;
+                SDL_QueryTexture(potion_texture, NULL, NULL, &w, &h);
+                SDL_Rect src = {0, 0, w, h};
+                SDL_Rect dst = {center.x - 30, center.y - 30, 60, 60};
+                SDL_RenderCopy(renderer, potion_texture, &src, &dst);
+            }
         }
         // Render Troops
         for (Troop *troop = map->troops_head; troop != NULL; troop = troop->next) {
-            GME_Move(troop->x, troop->y, 0.5, troop->sx, troop->sy, troop->dx, troop->dy, &troop->x, &troop->y);
+            double size = 0.5;
+            if (troop->player->applied_potion != NULL &&
+                troop->player->applied_potion->type == TROOP_SPEED_X2)
+                size = 1;
+            if (!freeze_is_applied ||
+                (troop->player->applied_potion != NULL &&
+                troop->player->applied_potion->type == TROOP_FREEZE_OTHERS))
+                GME_Move(troop->x, troop->y, size, troop->sx, troop->sy, troop->dx, troop->dy, &troop->x, &troop->y);
             filledCircleRGBA(renderer, troop->x, troop->y, 6, RGBAColor(g_BackgroundColor));
             filledCircleRGBA(renderer, troop->x, troop->y, 5, RGBAColor(troop->player->color));
         }
@@ -664,6 +801,19 @@ int GME_RenderGame() {
             back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
             RGBAColor(g_BackgroundColor));
         ELE_HandleCollisions(map);
+        for (int i = 0; i < potion_cnt; i++) {
+            if (g_Potions[i] == NULL) continue;
+            for (Troop *troop = map->troops_head; troop != NULL; troop = troop->next) {
+                if (troop->player->applied_potion != NULL) continue;
+                SDL_Point X = g_Potions[i]->center;
+                SDL_Point Y = {troop->x, troop->y};
+                if (abs(X.x - Y.x) + abs(X.y - Y.y) < 40) {
+                    troop->player->applied_potion = g_Potions[i];
+                    g_Potions[i] = NULL;
+                    break;
+                }
+            }
+        }
         // AI
         for (int i = 0; i < map->player_cnt; i++) {
             if (map->players[i] == g_CurPlayer || map->players[i]->area_cnt == 0) continue;
@@ -687,9 +837,15 @@ int GME_RenderGame() {
                 }
             }
             dst = map->areas[to];
-            while (dst == src) {
-                to = rand() % map->area_cnt;
-                dst = map->areas[to];
+            for (int i = 0; i < 10; i++) {
+                if (dst == src ||
+                    (ELE_GetAreaAppliedPotionType(dst) == AREA_SHIELD &&
+                    dst->conqueror != src->conqueror)) {
+                    to = rand() % map->area_cnt;
+                    dst = map->areas[to];
+                } else {
+                    break;
+                }
             }
             ELE_AreaAttack(src, dst);
             player->attack_delay = 60;

@@ -25,6 +25,7 @@ Player* ELE_CreatePlayer(
     new_player->color = color;
     new_player->score = score;
     new_player->attack_delay = 0;
+    new_player->applied_potion = NULL;
     return new_player;
 }
 

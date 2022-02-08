@@ -2,6 +2,7 @@
 #define _PLAYER_H
 
 #include <SDL2/SDL.h>
+#include "potion.h"
 
 struct Player {
     int id;
@@ -14,6 +15,8 @@ struct Player {
     SDL_Color color;
 
     int attack_delay;
+
+    Potion *applied_potion;
 };
 typedef struct Player Player;
 
