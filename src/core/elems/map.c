@@ -75,7 +75,7 @@ Area* ELE_GetAreaById(Map *map, int id) {
     return NULL;
 }
 
-int ELE_SaveMap(Map *map, int lastmap) {
+int ELE_SaveMap(Map *map, int lastmap, Potion **potions_onmap, int potion_cnt) {
     if (map == NULL) return 0;
     char filename[24];
     if (lastmap)
@@ -83,12 +83,32 @@ int ELE_SaveMap(Map *map, int lastmap) {
     else
         sprintf(filename, "bin/data/map%d.bin", map->id);
     SDL_RWops *map_file = SDL_RWFromFile(filename, "w+b");
+    if (map_file == NULL && !lastmap) {
+        sprintf(filename, "bin/data/map%d", map->id);
+        map_file = SDL_RWFromFile(filename, "w+b");
+    }
     if (map_file != NULL) {
         SDL_RWwrite(map_file, &map->id, sizeof(int), 1);
         if (lastmap) {
             SDL_RWwrite(map_file, &map->player_cnt, sizeof(int), 1);
             for (int i = 0; i < map->player_cnt; i++) {
-                SDL_RWwrite(map_file, &map->players[i]->id, sizeof(int), 1);
+                Player *player = map->players[i];
+                SDL_RWwrite(map_file, &player->id, sizeof(int), 1);
+                SDL_RWwrite(map_file, &player->area_cnt, sizeof(int), 1);
+                SDL_RWwrite(map_file, &player->troop_cnt, sizeof(int), 1);
+                SDL_RWwrite(map_file, &player->troop_rate, sizeof(int), 1);
+                SDL_RWwrite(map_file, &player->attack_delay, sizeof(int), 1);
+                Potion *pt = player->applied_potion;
+                int haspt = (pt != NULL);
+                SDL_RWwrite(map_file, &haspt, sizeof(int), 1);
+                if (haspt) SDL_RWwrite(map_file, pt, sizeof(Potion), 1);
+            }
+            SDL_RWwrite(map_file, &potion_cnt, sizeof(int), 1);
+            for (int i = 0; i < potion_cnt; i++) {
+                if (potions_onmap[i] != NULL)
+                    SDL_RWwrite(map_file, potions_onmap[i], sizeof(Potion), 1);
+                else
+                    SDL_RWwrite(map_file, &(Potion){0}, sizeof(Potion), 1);
             }
         }
         SDL_RWwrite(map_file, &map->area_cnt, sizeof(int), 1);

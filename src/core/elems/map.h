@@ -26,7 +26,7 @@ extern void ELE_DestroyMap(Map *map);
 
 extern Area* ELE_GetAreaById(Map *map, int id);
 
-extern int ELE_SaveMap(Map *map, int lastmap);
+extern int ELE_SaveMap(Map *map, int lastmap, Potion **potions_onmap, int potion_cnt);
 
 extern int ELE_GetMapAreaCntSum(Map *map);
 

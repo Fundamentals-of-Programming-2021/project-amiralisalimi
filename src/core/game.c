@@ -70,7 +70,13 @@ int GME_Start() {
         sprintf(buffer, "bin/data/map%d.bin", i);
         SDL_RWops *file = SDL_RWFromFile(buffer, "rb");
         if (file == NULL) {
-            break;
+            sprintf(buffer, "bin/data/map%d", i);
+            file = SDL_RWFromFile(buffer, "rb");
+            if (file == NULL) break;
+            else {
+                ++map_cnt;
+                SDL_RWclose(file);
+            }
         } else {
             ++map_cnt;
             SDL_RWclose(file);
@@ -133,7 +139,7 @@ int GME_Scoreboard() {
     SDL_Renderer *renderer = VDO_GetRenderer();
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     int table_width = 500, table_height = 600;
-    SDL_Rect table = {w / 2 - table_width / 2, h / 2 - table_height / 2, table_width, table_height};
+    SDL_Rect table = {w / 2 - table_width / 2, h / 2 - table_height / 2 - 30, table_width, table_height};
     int back_btn_sz = 70;
     SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
     int entry_margin = 15, entry_height = 20, name_width = 350, score_width = 120;
@@ -207,6 +213,8 @@ int GME_ChooseMap() {
     VDO_GetWindowSize(&w, &h);
     SDL_Event e;
     SDL_Renderer *renderer = VDO_GetRenderer();
+    int back_btn_sz = 70;
+    SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
     int btn_w = 150, btn_h = 180, btn_marg = 20;
     SDL_Rect btn[9];
     for (int i = 0; i < 9; i++) {
@@ -215,9 +223,8 @@ int GME_ChooseMap() {
         btn[i].y = h / 2 - (1 - tj) * (btn_h + btn_marg) - btn_h / 2 - 50;
         btn[i].w = btn_w; btn[i].h = btn_h;
     }
-    SDL_Rect rnd = {btn[6].x, h - 95, btn_w + 100, 70};
-    int back_btn_sz = 70;
-    SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
+    SDL_Rect rnd = {back_btn.x + back_btn.w + 20, h - 95, btn_w + 100, 70};
+    SDL_Rect tst = {rnd.x + rnd.w + 20, h - 95, btn_w + 60, 70};
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     int mapid = -10;
     while (!quit) {
@@ -235,6 +242,11 @@ int GME_ChooseMap() {
                 if (rnd.x <= x && x <= rnd.x + rnd.w &&
                     rnd.y <= y && y <= rnd.y + rnd.h) {
                     mapid = -1;
+                    quit = 1;
+                }
+                if (tst.x <= x && x <= tst.x + tst.w &&
+                    tst.y <= y && y <= tst.y + tst.h) {
+                    mapid = 100;
                     quit = 1;
                 }
                 for (int i = 0; i < 9; i++) {
@@ -263,6 +275,9 @@ int GME_ChooseMap() {
         roundedBoxRGBA(renderer, rnd.x, rnd.y, rnd.x + rnd.w, rnd.y + rnd.h, 10,
             RGBAColor(g_GreyColor));
         GME_WriteTTF(renderer, font, "Generate Random", g_WhiteColor, rnd.x + rnd.w / 2, h - 60);
+        roundedBoxRGBA(renderer, tst.x, tst.y, tst.x + tst.w, tst.y + tst.h, 10,
+            RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "Test Arena", g_WhiteColor, tst.x + tst.w / 2, h - 60);
         char buffer[50];
         sprintf(buffer, "Player: %s", g_CurPlayer->name);
         roundedRectangleRGBA(renderer, w - 370, h - 75, w - 20, h - 25, 10, RGBAColor(g_BlackColor));
@@ -282,7 +297,7 @@ int GME_ChooseMap() {
         if (GME_MapStart(0) == 1) sdl_quit = 1;
         GME_MapQuit(GME_GetCurMap());
     } else if (mapid >= 0) {
-        GME_RetrieveMap(mapid);
+        if (GME_RetrieveMap(mapid) < 0) return -1;
         if (GME_MapStart(GME_GetCurMap()) == 1) sdl_quit = 1;
         GME_MapQuit(GME_GetCurMap());
     }
@@ -518,6 +533,7 @@ Area* GME_GetAreaById(int id) {
 }
 
 int GME_MapStart(Map *map) {
+    LogInfo("Starting map...");
     if (map == NULL) {
         GME_BuildRandMap();
         Player *players[5];
@@ -543,6 +559,9 @@ int GME_MapStart(Map *map) {
             if (g_CurMap->areas[start_area]->conqueror != NULL) return -1;
             ELE_AreaConquer(g_CurMap->areas[start_area], g_CurMap->players[i]);
         }
+        g_Potions = malloc(sizeof(Potion*));
+        potion_cnt = 0;
+        potion_size = 1;
     } else {
         g_CurMap = map;
         if (map->players == NULL) {
@@ -572,10 +591,12 @@ int GME_MapStart(Map *map) {
                 ELE_AreaConquer(map->areas[start_area], map->players[i]);
             }
         }
+        if (g_Potions == NULL) {
+            g_Potions = malloc(sizeof(Potion*));
+            potion_cnt = 0;
+            potion_size = 1;
+        }
     }
-    g_Potions = malloc(sizeof(Potion*));
-    potion_cnt = 0;
-    potion_size = 1;
     SDL_Surface *surf;
     SDL_Renderer *renderer = VDO_GetRenderer();
     surf = IMG_Load("bin/images/TroopSpeedX2.png");
@@ -652,6 +673,10 @@ int GME_RetrieveMap(int id) {
     else
         sprintf(filename, "bin/data/map%d.bin", id);
     SDL_RWops *file = SDL_RWFromFile(filename, "rb");
+    if (file == NULL && id != -1) {
+        sprintf(filename, "bin/data/map%d", id);
+        file = SDL_RWFromFile(filename, "rb");
+    }
     if (file != NULL) {
         int mapid;
         SDL_RWread(file, &mapid, sizeof(int), 1);
@@ -663,6 +688,31 @@ int GME_RetrieveMap(int id) {
                 int player_id;
                 SDL_RWread(file, &player_id, sizeof(int), 1);
                 map->players[i] = GME_GetPlayerById(player_id);
+                SDL_RWread(file, &map->players[i]->area_cnt, sizeof(int), 1);
+                SDL_RWread(file, &map->players[i]->troop_cnt, sizeof(int), 1);
+                SDL_RWread(file, &map->players[i]->troop_rate, sizeof(int), 1);
+                SDL_RWread(file, &map->players[i]->attack_delay, sizeof(int), 1);
+                int haspt;
+                SDL_RWread(file, &haspt, sizeof(int), 1);
+                if (haspt) {
+                    Potion pt;
+                    SDL_RWread(file, &pt, sizeof(Potion), 1);
+                    map->players[i]->applied_potion = ELE_CreatePotion(
+                        pt.id, pt.type, pt.frames_onmap, pt.frames_applied, pt.center
+                    );
+                }
+            }
+            SDL_RWread(file, &potion_cnt, sizeof(int), 1);
+            potion_size = potion_cnt + 1;
+            g_Potions = malloc(sizeof(Potion*) * potion_size);
+            for (int i = 0; i < potion_cnt; i++) {
+                Potion pt;
+                SDL_RWread(file, &pt, sizeof(Potion), 1);
+                if (pt.frames_onmap > 0) {
+                    g_Potions[i] = ELE_CreatePotion(
+                        pt.id, pt.type, pt.frames_onmap, pt.frames_applied, pt.center
+                    );
+                } else g_Potions[i] = NULL;
             }
         }
         SDL_RWread(file, &map->area_cnt, sizeof(int), 1);
@@ -852,7 +902,7 @@ int GME_RenderGame() {
     Area **areas = map->areas;
     Area *selected = NULL;
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 18);
-    TTF_Font *font_big = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 24);
+    TTF_Font *font_big = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     int troop_cnt = 0;
     int frame = 0;
     int sdl_quit = 0;
@@ -888,7 +938,7 @@ int GME_RenderGame() {
                 if (save_btn.x <= x && x <= save_btn.x + save_btn.w &&
                     save_btn.y <= y && y <= save_btn.y + save_btn.h) {
                     map->id = map_cnt++;
-                    ELE_SaveMap(map, 0);
+                    ELE_SaveMap(map, 0, NULL, 0);
                 }
                 for (int i = 0; i < map->area_cnt; i++) {
                     if (abs(x - areas[i]->center.x) + abs(y - areas[i]->center.y) < 25) {
@@ -1010,7 +1060,7 @@ int GME_RenderGame() {
         }
         for (int i = 0; i < potion_cnt; i++) {
             if (g_Potions[i] != NULL) {
-                if (g_Potions[i]->frames_onmap == 0) {
+                if (g_Potions[i]->frames_onmap <= 0) {
                     ELE_DestroyPotion(g_Potions[i]);
                     g_Potions[i] = NULL;
                     continue;
@@ -1105,7 +1155,7 @@ int GME_RenderGame() {
     TTF_CloseFont(font_big);
     if (sdl_quit) return 1;
     if (winner == NULL) {
-        ELE_SaveMap(map, 1);
+        ELE_SaveMap(map, 1, g_Potions, potion_cnt);
         return 0;
     }
     for (int i = 0; i < map->player_cnt; i++) {
