@@ -107,7 +107,8 @@ int ELE_GetAreaCapacityByRadius(int radius) {
 }
 
 void ELE_AreaAttack(Area *first, Area *second) {
-    if (ELE_GetAreaAppliedPotionType(second) == AREA_SHIELD) return;
+    if (ELE_GetAreaAppliedPotionType(second) == AREA_SHIELD &&
+        first->conqueror != second->conqueror) return;
     first->attack = second;
     first->attack_cnt = first->troop_cnt;
 }

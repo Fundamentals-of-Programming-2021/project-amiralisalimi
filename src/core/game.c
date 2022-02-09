@@ -551,12 +551,12 @@ int GME_MapStart(Map *map) {
             for (int i = 0; i < map->player_cnt - 1; i++) {
                 map->players[i] = g_Players[i];
             }
+            map->players[map->player_cnt - 1] = g_CurPlayer;
             for (int i = 0; i < map->area_cnt; i++) {
                 map->areas[i]->troop_cnt = 30;
                 map->areas[i]->troop_inc_delay = 0;
                 map->areas[i]->troop_rate = 60;
             }
-            map->players[map->player_cnt - 1] = g_CurPlayer;
             for (int i = 0; i < map->player_cnt; i++) {
                 map->players[i]->applied_potion = NULL;
                 map->players[i]->area_cnt = 0;
@@ -818,11 +818,12 @@ int GME_PutRandomPotion() {
     int type = rand() % 4;
     SDL_Point center;
     int area_cnt = g_CurMap->area_cnt;
+    SDL_assert(area_cnt > 0);
     int from = rand() % area_cnt;
     int to = rand() % area_cnt;
     Area *src = g_CurMap->areas[from], *dst = g_CurMap->areas[to];
     center.x = src->center.x; center.y = src->center.y;
-    int size = rand() % SDL_max(abs(src->center.x - dst->center.x), abs(src->center.y - dst->center.y));
+    int size = rand() % SDL_max(abs(src->center.x - dst->center.x) + 1, abs(src->center.y - dst->center.y) + 1);
     double X, Y;
     GME_Move(center.x, center.y, size, src->center.x, src->center.y,
         dst->center.x, dst->center.y, &X, &Y);
