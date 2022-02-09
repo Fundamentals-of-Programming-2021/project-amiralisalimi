@@ -24,7 +24,13 @@ extern Map* ELE_CreateMap(
 );
 extern void ELE_DestroyMap(Map *map);
 
+extern Area* ELE_GetAreaById(Map *map, int id);
+
+extern int ELE_SaveMap(Map *map, int lastmap);
+
 extern int ELE_GetMapAreaCntSum(Map *map);
+
+extern int ELE_GetMapTroopCnt(Map *map);
 
 extern void ELE_AddTroopToMap(Map *map, Troop *troop);
 extern Troop* ELE_RemoveTroopFromMap(Map *map, Troop *troop);

@@ -59,9 +59,22 @@ void GME_Quit() {
     LogInfo("Done.");
 }
 
+int map_cnt = 0;
+
 int GME_Start() {
     if (GME_RetrievePlayers() != 0) {
         return -1;
+    }
+    for (int i = 0; i < 9; i++) {
+        char buffer[25];
+        sprintf(buffer, "bin/data/map%d.bin", i);
+        SDL_RWops *file = SDL_RWFromFile(buffer, "rb");
+        if (file == NULL) {
+            break;
+        } else {
+            ++map_cnt;
+            SDL_RWclose(file);
+        }
     }
     switch (GME_GetCurPlayer()) {
         case 1:
@@ -104,7 +117,6 @@ Area *g_Areas[MAX_AREA_CNT];
 Player *g_CurPlayer;
 
 Map *g_CurMap;
-int map_cnt = 0;
 
 Potion **g_Potions;
 int potion_cnt;
@@ -122,8 +134,8 @@ int GME_Scoreboard() {
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
     int table_width = 500, table_height = 600;
     SDL_Rect table = {w / 2 - table_width / 2, h / 2 - table_height / 2, table_width, table_height};
-    int back_btn_sz = 80;
-    SDL_Rect back_btn = {30, h - 20 - back_btn_sz, back_btn_sz, back_btn_sz};
+    int back_btn_sz = 70;
+    SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
     int entry_margin = 15, entry_height = 20, name_width = 350, score_width = 120;
     int player_cnt = GME_GetPlayerCnt();
     Player **players = malloc(sizeof(Player*) * player_cnt);
@@ -182,7 +194,98 @@ int GME_Scoreboard() {
             w - 200, h - 50);
         SDL_RenderPresent(renderer);
     }
+    TTF_CloseFont(font);
     free(players);
+    if (sdl_quit) return 1;
+    return 0;
+}
+
+int GME_ChooseMap() {
+    int quit = 0;
+    int sdl_quit = 0;
+    int w, h;
+    VDO_GetWindowSize(&w, &h);
+    SDL_Event e;
+    SDL_Renderer *renderer = VDO_GetRenderer();
+    int btn_w = 150, btn_h = 180, btn_marg = 20;
+    SDL_Rect btn[9];
+    for (int i = 0; i < 9; i++) {
+        int ti = i % 3, tj = i / 3;
+        btn[i].x = w / 2 - (1 - ti) * (btn_w + btn_marg) - btn_w / 2;
+        btn[i].y = h / 2 - (1 - tj) * (btn_h + btn_marg) - btn_h / 2 - 50;
+        btn[i].w = btn_w; btn[i].h = btn_h;
+    }
+    SDL_Rect rnd = {btn[6].x, h - 95, btn_w + 100, 70};
+    int back_btn_sz = 70;
+    SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
+    TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodePro.ttf", 24);
+    int mapid = -10;
+    while (!quit) {
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                quit = sdl_quit = 1;
+            } else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                if (back_btn.x <= x && x <= back_btn.x + back_btn.w &&
+                    back_btn.y <= y && y <= back_btn.y + back_btn.h) {
+                    quit = 1;
+                    break;
+                }
+                if (rnd.x <= x && x <= rnd.x + rnd.w &&
+                    rnd.y <= y && y <= rnd.y + rnd.h) {
+                    mapid = -1;
+                    quit = 1;
+                }
+                for (int i = 0; i < 9; i++) {
+                    if (i == map_cnt) break;
+                    if (btn[i].x <= x && x <= btn[i].x + btn[i].w &&
+                        btn[i].y <= y && y <= btn[i].y + btn[i].h) {
+                        mapid = i;
+                        quit = 1;
+                        break;
+                    }
+                }
+            }
+        }
+        boxRGBA(renderer, 0, 0, w, h, RGBAColor(g_BackgroundColor));
+        for (int i = 0; i < 9; i++) {
+            roundedRectangleRGBA(renderer, btn[i].x, btn[i].y, btn[i].x + btn[i].w, btn[i].y + btn[i].h,
+                10, RGBAColor(g_GreyColor));
+            if (i < map_cnt) {
+                roundedBoxRGBA(renderer, btn[i].x, btn[i].y, btn[i].x + btn[i].w, btn[i].y + btn[i].h,
+                    10, RGBAColor(g_GreyColor));
+                char buffer[10];
+                sprintf(buffer, "Map %d", i);
+                GME_WriteTTF(renderer, font, buffer, g_WhiteColor, btn[i].x + btn[i].w / 2, btn[i].y + btn[i].h / 2);
+            }
+        }
+        roundedBoxRGBA(renderer, rnd.x, rnd.y, rnd.x + rnd.w, rnd.y + rnd.h, 10,
+            RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font, "Generate Random", g_WhiteColor, rnd.x + rnd.w / 2, h - 60);
+        char buffer[50];
+        sprintf(buffer, "Player: %s", g_CurPlayer->name);
+        roundedRectangleRGBA(renderer, w - 370, h - 75, w - 20, h - 25, 10, RGBAColor(g_BlackColor));
+        GME_WriteTTF(renderer, font, buffer, g_BlackColor,
+            w - 200, h - 50);
+        roundedBoxRGBA(renderer, back_btn.x, back_btn.y, back_btn.x + back_btn.w,
+            back_btn.y + back_btn.h, 10, RGBAColor(g_GreyColor));
+        filledTrigonRGBA(renderer, back_btn.x + 20, back_btn.y + back_btn.h / 2,
+            back_btn.x + back_btn.w - 20, back_btn.y + 15,
+            back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
+            RGBAColor(g_BackgroundColor));
+        SDL_RenderPresent(renderer);
+    }
+    TTF_CloseFont(font);
+    if (sdl_quit) return 1;
+    if (mapid == -1) {
+        if (GME_MapStart(0) == 1) sdl_quit = 1;
+        GME_MapQuit(GME_GetCurMap());
+    } else if (mapid >= 0) {
+        GME_RetrieveMap(mapid);
+        if (GME_MapStart(GME_GetCurMap()) == 1) sdl_quit = 1;
+        GME_MapQuit(GME_GetCurMap());
+    }
     if (sdl_quit) return 1;
     return 0;
 }
@@ -223,12 +326,16 @@ int GME_Menu() {
             }
         }
         if (next == 0) {
-            if (GME_MapStart(0) == 1) {
+            if (GME_ChooseMap() == 1) {
                 quit = 1;
             }
-            GME_MapQuit(GME_GetCurMap());
         } else if (next == 1) {
-
+            if (GME_RetrieveMap(-1) == 0) {
+                if (GME_MapStart(GME_GetCurMap()) == 1) {
+                    quit = 1;
+                }
+                GME_MapQuit(GME_GetCurMap());
+            }
         } else if (next == 2) {
             if (GME_Scoreboard() == 1) {
                 quit = 1;
@@ -258,6 +365,7 @@ int GME_Menu() {
         SDL_RenderPresent(renderer);
     }
     TTF_CloseFont(font);
+    TTF_CloseFont(font_small);
     return 0;
 }
 
@@ -282,6 +390,17 @@ int GME_GetPlayerCnt() {
         }
     }
     return player_cnt;
+}
+
+int GME_GetAreaCnt() {
+    int area_cnt = MAX_AREA_CNT;
+    for (int i = 0; i < MAX_AREA_CNT; i++) {
+        if (g_Areas[i] == NULL) {
+            area_cnt = i;
+            break;
+        }
+    }
+    return area_cnt;
 }
 
 int GME_WriteTTF(SDL_Renderer *renderer, TTF_Font *font, const char *s, SDL_Color color,
@@ -333,6 +452,10 @@ int GME_GetCurPlayer() {
                     strcat(name, e.text.text);
                 name_ptr = strlen(name);
             } else if (e.type == SDL_QUIT) {
+                SDL_StopTextInput();
+                SDL_DestroyTexture(icon_texture);
+                SDL_FreeSurface(icon);
+                TTF_CloseFont(font);
                 return 1;
             }
         }
@@ -374,6 +497,26 @@ int GME_GetCurPlayer() {
     return 0;
 }
 
+Player* GME_GetPlayerById(int id) {
+    int player_cnt = GME_GetPlayerCnt();
+    for (int i = 0; i < player_cnt; i++) {
+        if (g_Players[i]->id == id) {
+            return g_Players[i];
+        }
+    }
+    return NULL;
+}
+
+Area* GME_GetAreaById(int id) {
+    int area_cnt = GME_GetAreaCnt();
+    for (int i = 0; i < area_cnt; i++) {
+        if (g_Areas[i]->id == id) {
+            return g_Areas[i];
+        }
+    }
+    return NULL;
+}
+
 int GME_MapStart(Map *map) {
     if (map == NULL) {
         GME_BuildRandMap();
@@ -391,17 +534,44 @@ int GME_MapStart(Map *map) {
             }
         }
         g_CurMap = ELE_CreateMap(map_cnt, players, 5, g_Areas, area_cnt);
+        for (int i = 0; i < g_CurMap->player_cnt; i++) {
+            int start_area = rand() % g_CurMap->area_cnt;
+            for (int i = 0; i < 20; i++) {
+                if (g_CurMap->areas[start_area]->conqueror == NULL) break;
+                start_area = rand() % g_CurMap->area_cnt;
+            }
+            if (g_CurMap->areas[start_area]->conqueror != NULL) return -1;
+            ELE_AreaConquer(g_CurMap->areas[start_area], g_CurMap->players[i]);
+        }
     } else {
         g_CurMap = map;
-    }
-    for (int i = 0; i < g_CurMap->player_cnt; i++) {
-        int start_area = rand() % g_CurMap->area_cnt;
-        for (int i = 0; i < 20; i++) {
-            if (g_CurMap->areas[start_area]->conqueror == NULL) break;
-            start_area = rand() % g_CurMap->area_cnt;
+        if (map->players == NULL) {
+            map->player_cnt = 5;
+            map->players = malloc(sizeof(Player*) * map->player_cnt);
+            for (int i = 0; i < map->player_cnt - 1; i++) {
+                map->players[i] = g_Players[i];
+            }
+            for (int i = 0; i < map->area_cnt; i++) {
+                map->areas[i]->troop_cnt = 30;
+                map->areas[i]->troop_inc_delay = 0;
+                map->areas[i]->troop_rate = 60;
+            }
+            map->players[map->player_cnt - 1] = g_CurPlayer;
+            for (int i = 0; i < map->player_cnt; i++) {
+                map->players[i]->applied_potion = NULL;
+                map->players[i]->area_cnt = 0;
+                map->players[i]->attack_delay = 0;
+                map->players[i]->troop_cnt = 0;
+                map->players[i]->troop_rate = 60;
+                int start_area = rand() % map->area_cnt;
+                for (int i = 0; i < 20; i++) {
+                    if (map->areas[start_area]->conqueror == NULL) break;
+                    start_area = rand() % map->area_cnt;
+                }
+                if (map->areas[start_area]->conqueror != NULL) return -1;
+                ELE_AreaConquer(map->areas[start_area], map->players[i]);
+            }
         }
-        if (g_CurMap->areas[start_area]->conqueror != NULL) return -1;
-        ELE_AreaConquer(g_CurMap->areas[start_area], g_CurMap->players[i]);
     }
     g_Potions = malloc(sizeof(Potion*));
     potion_cnt = 0;
@@ -452,7 +622,7 @@ void GME_MapQuit(Map *map) {
 int GME_RetrievePlayers() {
     memset(g_Players, 0, sizeof(g_Players));
     const char *players_filename = "bin/data/players.bin";
-    SDL_RWops *players_file = SDL_RWFromFile(players_filename, "r+b");
+    SDL_RWops *players_file = SDL_RWFromFile(players_filename, "rb");
     Player players[MAX_PLAYER_CNT] = {0};
     if (players_file == NULL) {
         LogInfo("Unable to open players data, going with the defaults");
@@ -475,26 +645,92 @@ int GME_RetrievePlayers() {
     return 0;
 }
 
-int GME_RetrieveAreas(int new) {
-    memset(g_Areas, 0, sizeof(g_Areas));
-    const char *areas_filename = "bin/data/areas.bin";
-    SDL_RWops *areas_file = (new ? NULL : SDL_RWFromFile(areas_filename, "r+b"));
-    Area areas[MAX_AREA_CNT];
-    if (areas_file == NULL || new) {
-        LogInfo("Unable to open areas data");
-        GME_BuildRandMap();
-    } else {
-        LogInfo("Read areas from file");
-        SDL_RWread(areas_file, areas, sizeof(Area), MAX_AREA_CNT);
-        SDL_RWclose(areas_file);
-        for (int i = 0; i < MAX_AREA_CNT; i++) {
-            g_Areas[i] = ELE_CreateArea(
-                areas[i].id, areas[i].conqueror, areas[i].capacity,
-                areas[i].troop_cnt, areas[i].troop_rate, areas[i].center,
-                areas[i].radius, areas[i].vertices, areas[i].vertex_cnt);
+int GME_RetrieveMap(int id) {
+    char filename[24];
+    if (id == -1)
+        sprintf(filename, "bin/data/lastmap.bin");
+    else
+        sprintf(filename, "bin/data/map%d.bin", id);
+    SDL_RWops *file = SDL_RWFromFile(filename, "rb");
+    if (file != NULL) {
+        int mapid;
+        SDL_RWread(file, &mapid, sizeof(int), 1);
+        Map *map = ELE_CreateMap(mapid, NULL, 0, NULL, 0);
+        if (id == -1) {
+            SDL_RWread(file, &map->player_cnt, sizeof(int), 1);
+            map->players = malloc(sizeof(Player*) * map->player_cnt);
+            for (int i = 0; i < map->player_cnt; i++) {
+                int player_id;
+                SDL_RWread(file, &player_id, sizeof(int), 1);
+                map->players[i] = GME_GetPlayerById(player_id);
+            }
         }
+        SDL_RWread(file, &map->area_cnt, sizeof(int), 1);
+        map->areas = malloc(sizeof(Area*) * map->area_cnt);
+        for (int i = 0; i < map->area_cnt; i++) {
+            int area_id;
+            SDL_RWread(file, &area_id, sizeof(int), 1);
+            int conq_id;
+            SDL_RWread(file, &conq_id, sizeof(int), 1);
+            int area_cap, area_tcnt, area_trate, area_tincdelay;
+            SDL_RWread(file, &area_cap, sizeof(int), 1);
+            SDL_RWread(file, &area_tcnt, sizeof(int), 1);
+            SDL_RWread(file, &area_trate, sizeof(int), 1);
+            SDL_RWread(file, &area_tincdelay, sizeof(int), 1);
+            SDL_Point area_center;
+            SDL_RWread(file, &area_center, sizeof(SDL_Point), 1);
+            int area_radius;
+            SDL_RWread(file, &area_radius, sizeof(int), 1);
+            Area *area = ELE_CreateArea(
+                area_id, (id == -1 ? GME_GetPlayerById(conq_id) : NULL),
+                ELE_GetAreaCapacityByRadius(area_radius), area_tcnt,
+                area_trate, area_center, area_radius, NULL, 0
+            );
+            int vertex_cnt;
+            SDL_RWread(file, &vertex_cnt, sizeof(int), 1);
+            area->vertex_cnt = vertex_cnt;
+            area->vertices = malloc(sizeof(SDL_Point) * vertex_cnt);
+            for (int i = 0; i < vertex_cnt; i++) {
+                SDL_RWread(file, &area->vertices[i], sizeof(SDL_Point), 1);
+            }
+            map->areas[i] = area;
+        }
+        if (id == -1) {
+            for (int i = 0; i < map->area_cnt; i++) {
+                int att_id;
+                SDL_RWread(file, &att_id, sizeof(int), 1);
+                map->areas[i]->attack = ELE_GetAreaById(map, att_id);
+                SDL_RWread(file, &map->areas[i]->attack_delay, sizeof(int), 1);
+                SDL_RWread(file, &map->areas[i]->attack_cnt, sizeof(int), 1);
+            }
+            int troop_cnt;
+            SDL_RWread(file, &troop_cnt, sizeof(int), 1);
+            for (int i = 0; i < troop_cnt; i++) {
+                int troop_id;
+                SDL_RWread(file, &troop_id, sizeof(int), 1);
+                int player_id;
+                SDL_RWread(file, &player_id, sizeof(int), 1);
+                double x, y;
+                SDL_RWread(file, &x, sizeof(double), 1);
+                SDL_RWread(file, &y, sizeof(double), 1);
+                int src_id, dst_id;
+                SDL_RWread(file, &src_id, sizeof(int), 1);
+                SDL_RWread(file, &dst_id, sizeof(int), 1);
+                Troop *troop = ELE_CreateTroop(
+                    troop_id, GME_GetPlayerById(player_id), x, y,
+                    ELE_GetAreaById(map, src_id), ELE_GetAreaById(map, dst_id),
+                    NULL, NULL
+                );
+                ELE_AddTroopToMap(map, troop);
+            }
+        }
+        g_CurMap = map;
+        SDL_RWclose(file);
+    } else {
+        LogInfo("Unable to read map files");
+        return -1;
     }
-    LogInfo("Area Retrieve Done");
+    LogInfo("Map file read successful");
     return 0;
 }
 
@@ -584,17 +820,9 @@ int GME_PutRandomPotion() {
     int area_cnt = g_CurMap->area_cnt;
     int from = rand() % area_cnt;
     int to = rand() % area_cnt;
-    for (int i = 0; i < 10; i++) {
-        Area *first = g_Areas[from], *second = g_Areas[to];
-        if (abs(first->center.x - second->center.x) +
-            abs(first->center.y - second->center.y) > 400) break;
-        to = rand() % area_cnt;
-    }
-    Area *src = g_Areas[from], *dst = g_Areas[to];
-    if (abs(src->center.x - dst->center.x) +
-        abs(src->center.y - dst->center.y) <= 400) return -1;
+    Area *src = g_CurMap->areas[from], *dst = g_CurMap->areas[to];
     center.x = src->center.x; center.y = src->center.y;
-    int size = rand() % 240 + 80;
+    int size = rand() % SDL_max(abs(src->center.x - dst->center.x), abs(src->center.y - dst->center.y));
     double X, Y;
     GME_Move(center.x, center.y, size, src->center.x, src->center.y,
         dst->center.x, dst->center.y, &X, &Y);
@@ -614,13 +842,16 @@ int GME_RenderGame() {
     VDO_GetWindowSize(&w, &h);
     SDL_Renderer *renderer = VDO_GetRenderer();
     SDL_Event e;
-    int back_btn_sz = 80;
-    SDL_Rect back_btn = {30, h - 20 - back_btn_sz, back_btn_sz, back_btn_sz};
+    int back_btn_sz = 70;
+    SDL_Rect back_btn = {30, h - 25 - back_btn_sz, back_btn_sz, back_btn_sz};
+    int save_sz = 200;
+    SDL_Rect save_btn = {back_btn.x + back_btn.w + 20, back_btn.y, save_sz, back_btn_sz};
     Map *map = g_CurMap;
     Player *player = g_CurPlayer;
     Area **areas = map->areas;
     Area *selected = NULL;
     TTF_Font *font = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 18);
+    TTF_Font *font_big = TTF_OpenFont("bin/fonts/SourceCodeProBold.ttf", 24);
     int troop_cnt = 0;
     int frame = 0;
     int sdl_quit = 0;
@@ -652,6 +883,11 @@ int GME_RenderGame() {
                     back_btn.y <= y && y <= back_btn.y + back_btn.h) {
                     quit = 1;
                     break;
+                }
+                if (save_btn.x <= x && x <= save_btn.x + save_btn.w &&
+                    save_btn.y <= y && y <= save_btn.y + save_btn.h) {
+                    map->id = map_cnt++;
+                    ELE_SaveMap(map, 0);
                 }
                 for (int i = 0; i < map->area_cnt; i++) {
                     if (abs(x - areas[i]->center.x) + abs(y - areas[i]->center.y) < 25) {
@@ -768,7 +1004,7 @@ int GME_RenderGame() {
                 areas[i]->center.x, areas[i]->center.y + 25);
         }
         // Render Potion
-        if (rand() % 10 == 0) {
+        if (rand() % 3000 == 0) {
             GME_PutRandomPotion();
         }
         for (int i = 0; i < potion_cnt; i++) {
@@ -807,6 +1043,10 @@ int GME_RenderGame() {
             back_btn.x + back_btn.w - 20, back_btn.y + 15,
             back_btn.x + back_btn.w - 20, back_btn.y + back_btn.h - 15,
             RGBAColor(g_BackgroundColor));
+        roundedBoxRGBA(renderer, save_btn.x, save_btn.y, save_btn.x + save_btn.w,
+            save_btn.y + save_btn.h, 10, RGBAColor(g_GreyColor));
+        GME_WriteTTF(renderer, font_big, "Save Map", g_WhiteColor,
+            save_btn.x + save_btn.w / 2, save_btn.y + save_btn.h / 2);
         ELE_HandleCollisions(map);
         for (int i = 0; i < potion_cnt; i++) {
             if (g_Potions[i] == NULL) continue;
@@ -859,9 +1099,14 @@ int GME_RenderGame() {
         }
         SDL_RenderPresent(renderer);
     }
+    LogInfo("Quiting game rendering");
     TTF_CloseFont(font);
+    TTF_CloseFont(font_big);
     if (sdl_quit) return 1;
-    if (winner == NULL) return 0;
+    if (winner == NULL) {
+        ELE_SaveMap(map, 1);
+        return 0;
+    }
     for (int i = 0; i < map->player_cnt; i++) {
         if (map->players[i] == winner) {
             map->players[i]->score += map->player_cnt - 1;

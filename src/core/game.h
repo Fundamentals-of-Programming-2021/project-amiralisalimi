@@ -15,6 +15,7 @@ extern Map* GME_GetCurMap(void);
 extern Player** GME_GetPlayers(void);
 extern Area** GME_GetAreas(void);
 extern int GME_GetPlayerCnt(void);
+extern int GME_GetAreaCnt(void);
 
 extern int GME_GetCurPlayer(void);
 
@@ -25,7 +26,7 @@ extern int GME_MapStart(Map *map);
 extern void GME_MapQuit(Map *map);
 
 extern int GME_RetrievePlayers(void);
-extern int GME_RetrieveAreas(int new);
+extern int GME_RetrieveMap(int id);
 
 extern void GME_BuildRandMap(void);
 

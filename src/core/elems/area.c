@@ -31,9 +31,11 @@ Area* ELE_CreateArea(
     new_area->attack_delay = 0;
     new_area->attack_cnt = 0;
     new_area->troop_inc_delay = 0;
-    new_area->vertices = malloc(sizeof(SDL_Point) * vertex_cnt);
-    memcpy(new_area->vertices, vertices, sizeof(SDL_Point) * vertex_cnt);
     new_area->vertex_cnt = vertex_cnt;
+    if (vertex_cnt) {
+        new_area->vertices = malloc(sizeof(SDL_Point) * vertex_cnt);
+        memcpy(new_area->vertices, vertices, sizeof(SDL_Point) * vertex_cnt);
+    }
     return new_area;
 }
 

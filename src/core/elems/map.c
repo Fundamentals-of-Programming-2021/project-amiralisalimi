@@ -29,11 +29,15 @@ Map* ELE_CreateMap(
     new_map->id = id;
     new_map->player_cnt = player_cnt;
     new_map->area_cnt = area_cnt;
-    new_map->players = malloc(sizeof(Player*) * player_cnt);
-    new_map->areas = malloc(sizeof(Area*) * area_cnt);
     new_map->troops_head = NULL;
-    memcpy(new_map->players, players, sizeof(Player*) * player_cnt);
-    memcpy(new_map->areas, areas, sizeof(Area*) * area_cnt);
+    if (player_cnt) {
+        new_map->players = malloc(sizeof(Player*) * player_cnt);
+        memcpy(new_map->players, players, sizeof(Player*) * player_cnt);
+    }
+    if (area_cnt) {
+        new_map->areas = malloc(sizeof(Area*) * area_cnt);
+        memcpy(new_map->areas, areas, sizeof(Area*) * area_cnt);
+    }
     return new_map;
 }
 
@@ -61,8 +65,74 @@ void ELE_DestroyMap(Map *map) {
     free(map);
 }
 
-void ELE_SaveMap(Map *map) {
-    
+Area* ELE_GetAreaById(Map *map, int id) {
+    if (map == NULL) return NULL;
+    for (int i = 0; i < map->area_cnt; i++) {
+        if (map->areas[i]->id == id) {
+            return map->areas[i];
+        }
+    }
+    return NULL;
+}
+
+int ELE_SaveMap(Map *map, int lastmap) {
+    if (map == NULL) return 0;
+    char filename[24];
+    if (lastmap)
+        sprintf(filename, "bin/data/lastmap.bin");
+    else
+        sprintf(filename, "bin/data/map%d.bin", map->id);
+    SDL_RWops *map_file = SDL_RWFromFile(filename, "w+b");
+    if (map_file != NULL) {
+        SDL_RWwrite(map_file, &map->id, sizeof(int), 1);
+        if (lastmap) {
+            SDL_RWwrite(map_file, &map->player_cnt, sizeof(int), 1);
+            for (int i = 0; i < map->player_cnt; i++) {
+                SDL_RWwrite(map_file, &map->players[i]->id, sizeof(int), 1);
+            }
+        }
+        SDL_RWwrite(map_file, &map->area_cnt, sizeof(int), 1);
+        for (int i = 0; i < map->area_cnt; i++) {
+            Area *area = map->areas[i];
+            SDL_RWwrite(map_file, &area->id, sizeof(int), 1);
+            int conq_id = (area->conqueror ? area->conqueror->id : -1);
+            SDL_RWwrite(map_file, &conq_id, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->capacity, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->troop_cnt, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->troop_rate, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->troop_inc_delay, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->center, sizeof(SDL_Point), 1);
+            SDL_RWwrite(map_file, &area->radius, sizeof(int), 1);
+            SDL_RWwrite(map_file, &area->vertex_cnt, sizeof(int), 1);
+            for (int i = 0; i < area->vertex_cnt; i++) {
+                SDL_RWwrite(map_file, &area->vertices[i], sizeof(SDL_Point), 1);
+            }
+        }
+        if (lastmap) {
+            for (int i = 0; i < map->area_cnt; i++) {
+                int att_id = (map->areas[i]->attack ? map->areas[i]->attack->id : -1);
+                SDL_RWwrite(map_file, &att_id, sizeof(int), 1);
+                SDL_RWwrite(map_file, &map->areas[i]->attack_delay, sizeof(int), 1);
+                SDL_RWwrite(map_file, &map->areas[i]->attack_cnt, sizeof(int), 1);
+            }
+            int troop_cnt = ELE_GetMapTroopCnt(map);
+            SDL_RWwrite(map_file, &troop_cnt, sizeof(int), 1);
+            for (Troop *troop = map->troops_head; troop != NULL; troop = troop->next) {
+                SDL_RWwrite(map_file, &troop->id, sizeof(int), 1);
+                SDL_RWwrite(map_file, &troop->player->id, sizeof(int), 1);
+                SDL_RWwrite(map_file, &troop->x, sizeof(double), 1);
+                SDL_RWwrite(map_file, &troop->y, sizeof(double), 1);
+                SDL_RWwrite(map_file, &troop->src->id, sizeof(int), 1);
+                SDL_RWwrite(map_file, &troop->dst->id, sizeof(int), 1);
+            }
+        }
+        SDL_RWclose(map_file);
+    } else {
+        LogError("Unable to r/w maps: %s");
+        return -1;
+    }
+    LogInfo("Map save successful: %s", filename);
+    return 0;
 }
 
 int ELE_GetMapAreaCntSum(Map *map) {
@@ -71,6 +141,15 @@ int ELE_GetMapAreaCntSum(Map *map) {
         sum += map->players[i]->area_cnt;
     }
     return sum;
+}
+
+int ELE_GetMapTroopCnt(Map *map) {
+    int troop_cnt = 0;
+    if (map == NULL) return troop_cnt;
+    for (Troop *troop = map->troops_head; troop != NULL; troop = troop->next) {
+        ++troop_cnt;
+    }
+    return troop_cnt;
 }
 
 void ELE_AddTroopToMap(Map *map, Troop *troop) {
