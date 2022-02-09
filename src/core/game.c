@@ -296,6 +296,10 @@ int GME_ChooseMap() {
     if (mapid == -1) {
         if (GME_MapStart(0) == 1) sdl_quit = 1;
         GME_MapQuit(GME_GetCurMap());
+    } else if (mapid == 100) {
+        if (GME_GenerateTestArena() < 0) return -1;
+        if (GME_MapStart(GME_GetCurMap()) == 1) sdl_quit = 1;
+        GME_MapQuit(GME_GetCurMap());
     } else if (mapid >= 0) {
         if (GME_RetrieveMap(mapid) < 0) return -1;
         if (GME_MapStart(GME_GetCurMap()) == 1) sdl_quit = 1;
@@ -839,6 +843,27 @@ void GME_BuildRandMap() {
         }
     }
     LogInfo("Random Area Generation Done");
+}
+
+int GME_GenerateTestArena() {
+    int area_cnt;
+    do {
+        GME_BuildRandMap();
+        area_cnt = GME_GetAreaCnt();
+    } while (area_cnt < 12);
+    int opp_area = rand() % area_cnt;
+    Player *players[2];
+    players[0] = g_Players[3];
+    players[1] = g_CurPlayer;
+    g_CurMap = ELE_CreateMap(map_cnt, players, 2, g_Areas, area_cnt);
+    for (int i = 0; i < g_CurMap->area_cnt; i++) {
+        if (i == opp_area) {
+            ELE_AreaConquer(g_CurMap->areas[i], g_CurMap->players[0]);
+        } else {
+            ELE_AreaConquer(g_CurMap->areas[i], g_CurMap->players[1]);
+        }
+    }
+    return 0;
 }
 
 SDL_Color GME_ChangeAlpha(SDL_Color color, Uint8 alpha) {

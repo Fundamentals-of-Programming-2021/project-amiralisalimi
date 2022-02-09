@@ -28,6 +28,7 @@ extern void GME_MapQuit(Map *map);
 extern int GME_RetrievePlayers(void);
 extern int GME_RetrieveMap(int id);
 
+extern int GME_GenerateTestArena(void);
 extern void GME_BuildRandMap(void);
 
 extern int GME_RenderGame(void);
