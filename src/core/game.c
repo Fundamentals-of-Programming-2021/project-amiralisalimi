@@ -1066,10 +1066,14 @@ int GME_RenderGame() {
                     areas[i]->attack_delay = 25;
                 }
             }
+            int area_shield = ELE_GetAreaAppliedPotionType(areas[i]) == AREA_SHIELD;
+            int beyond_cap = ELE_GetAreaAppliedPotionType(areas[i]) == AREA_BEYOND_CAPACITY;
             ELE_ColorArea(areas[i], (areas[i] == selected ? g_BlueColor :
-                (ELE_GetAreaAppliedPotionType(areas[i]) == AREA_SHIELD ? g_BlackColor : g_BackgroundColor)),
+                (area_shield ? g_PotionColors[AREA_SHIELD] : 
+                (beyond_cap ? g_PotionColors[AREA_BEYOND_CAPACITY] : g_BackgroundColor))),
                 (areas[i]->conqueror ? areas[i]->conqueror->color : g_GreyColor),
-                (areas[i] == selected ? 5 : 2));
+                (areas[i] == selected ? 5 :
+                (area_shield | beyond_cap ? 4 : 2)));
             filledCircleRGBA(renderer, areas[i]->center.x, areas[i]->center.y, 16,
                 245, 245, 245, 255);
         }
@@ -1080,7 +1084,7 @@ int GME_RenderGame() {
                 areas[i]->center.x, areas[i]->center.y + 25);
         }
         // Render Potion
-        if (rand() % 3000 == 0) {
+        if (rand() % 2400 == 0) {
             GME_PutRandomPotion();
         }
         for (int i = 0; i < potion_cnt; i++) {
