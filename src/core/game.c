@@ -696,6 +696,8 @@ int GME_RetrieveMap(int id) {
                 SDL_RWread(file, &map->players[i]->troop_cnt, sizeof(int), 1);
                 SDL_RWread(file, &map->players[i]->troop_rate, sizeof(int), 1);
                 SDL_RWread(file, &map->players[i]->attack_delay, sizeof(int), 1);
+                map->players[i]->area_cnt = 0;
+                map->players[i]->troop_cnt = 0;
                 int haspt;
                 SDL_RWread(file, &haspt, sizeof(int), 1);
                 if (haspt) {
@@ -735,11 +737,13 @@ int GME_RetrieveMap(int id) {
             SDL_RWread(file, &area_center, sizeof(SDL_Point), 1);
             int area_radius;
             SDL_RWread(file, &area_radius, sizeof(int), 1);
+            Player *player = GME_GetPlayerById(conq_id);
             Area *area = ELE_CreateArea(
-                area_id, (id == -1 ? GME_GetPlayerById(conq_id) : NULL),
+                area_id, (id == -1 ? player : NULL),
                 ELE_GetAreaCapacityByRadius(area_radius), area_tcnt,
                 area_trate, area_center, area_radius, NULL, 0
             );
+            if (player) player->area_cnt++;
             int vertex_cnt;
             SDL_RWread(file, &vertex_cnt, sizeof(int), 1);
             area->vertex_cnt = vertex_cnt;
@@ -770,8 +774,9 @@ int GME_RetrieveMap(int id) {
                 int src_id, dst_id;
                 SDL_RWread(file, &src_id, sizeof(int), 1);
                 SDL_RWread(file, &dst_id, sizeof(int), 1);
+                Player *player = GME_GetPlayerById(player_id);
                 Troop *troop = ELE_CreateTroop(
-                    troop_id, GME_GetPlayerById(player_id), x, y,
+                    troop_id, player, x, y,
                     ELE_GetAreaById(map, src_id), ELE_GetAreaById(map, dst_id),
                     NULL, NULL
                 );
